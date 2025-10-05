@@ -481,7 +481,7 @@ export class TauTongueInterpreter {
       width, 
       height, 
       padding: options.padding || Math.min(width, height) * 0.05, // 5% padding relative to size
-      
+      showLabels: options.noLabels === true ? false : true,
     });
   }
 } 
