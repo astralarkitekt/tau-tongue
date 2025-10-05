@@ -1,0 +1,32 @@
+{
+  "name": "tau-tongue",
+  "version": "1.0.0",
+  "author": "Astral Arkitekt <astralarkitekt@gmail.com>",
+  "description": "Tau-Tongue is a symbolic narrative algebra for meaning-making and storytelling, designed to help users construct and explore narratives through a structured framework.",
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc",
+    "prepublishOnly": "npm run build"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/astralarkitekt/tau-tongue.git"
+  },
+  "publishConfig": {
+    "access": "restricted",
+    "registry": "https://npm.pkg.github.com/"
+  },
+  "devDependencies": {
+    "@types/node": "^24.6.2",
+    "typescript": "^5.2.2"
+  },
+  "keywords": [],
+  "dependencies": {
+    "canvas": "^3.2.0"
+  }
+}
