@@ -74,6 +74,27 @@ export interface TauSpineResult {
   };
 }
 
+export interface FlattenedScene {
+  sceneNumber: number;
+  equation: TauTongueResult;
+  bookId?: number;
+  actId?: number;
+  chapterId?: number;
+}
+
+export interface FlattenedTauSpineResult {
+  spark: string;
+  format: string;
+  protoEquation: TauTongueResult;
+  scenes: FlattenedScene[];
+  stats: {
+    totalScenes: number;
+    totalNodes: number;
+    maxDepth: number;
+    generationTime: number;
+  };
+}
+
 export enum SpineFormat {
   SHORT = 6,
   NOVELETTE = 7,
@@ -88,6 +109,7 @@ export class TauSpine extends TauTongueInterpreter {
   
   private nodeCount = 0;
   private maxDepthReached = 0;
+  private generatedResult: TauSpineResult | null = null;
   
   constructor(
     private spark: string,
@@ -132,7 +154,7 @@ export class TauSpine extends TauTongueInterpreter {
       lazyChildren
     );
     
-    return {
+    this.generatedResult = {
       spark: this.spark,
       format: this.formatData.format,
       protoEquation,
@@ -143,6 +165,8 @@ export class TauSpine extends TauTongueInterpreter {
         generationTime: Date.now() - startTime
       }
     };
+    
+    return this.generatedResult;
   }
 
   /**
@@ -176,6 +200,89 @@ export class TauSpine extends TauTongueInterpreter {
     
     node.childrenLoaded = true;
     return node.children;
+  }
+
+  /**
+   * Flatten the spine to return only proto-equation and scene equations
+   * Auto-loads all children if lazy loading was used
+   */
+  public flatten(): FlattenedTauSpineResult {
+    if (!this.generatedResult) {
+      throw new Error('Must call generate() before flatten()');
+    }
+
+    // Ensure all children are loaded
+    this.ensureFullyLoaded(this.generatedResult.spine);
+
+    // Collect all scene equations
+    const scenes = this.collectScenes(this.generatedResult.spine);
+
+    return {
+      spark: this.generatedResult.spark,
+      format: this.generatedResult.format,
+      protoEquation: this.generatedResult.protoEquation,
+      scenes,
+      stats: {
+        totalScenes: scenes.length,
+        totalNodes: this.generatedResult.stats.totalNodes,
+        maxDepth: this.generatedResult.stats.maxDepth,
+        generationTime: this.generatedResult.stats.generationTime
+      }
+    };
+  }
+
+  /**
+   * Ensure all nodes in the tree have their children loaded
+   */
+  private ensureFullyLoaded(nodes: TauSpineNode[]): void {
+    for (const node of nodes) {
+      if (node.hasChildren && !node.childrenLoaded) {
+        this.generateChildren(node);
+      }
+      if (node.children.length > 0) {
+        this.ensureFullyLoaded(node.children);
+      }
+    }
+  }
+
+  /**
+   * Recursively collect all scene equations from the spine tree
+   */
+  private collectScenes(
+    nodes: TauSpineNode[],
+    parentContext: { bookId?: number; actId?: number; chapterId?: number } = {},
+    sceneCounter: { count: number } = { count: 0 }
+  ): FlattenedScene[] {
+    const scenes: FlattenedScene[] = [];
+
+    for (const node of nodes) {
+      // Update context based on current node's unit type
+      const currentContext = { ...parentContext };
+      if (node.unit === 'Book') currentContext.bookId = node.unitId;
+      if (node.unit === 'Act') currentContext.actId = node.unitId;
+      if (node.unit === 'Chapter') currentContext.chapterId = node.unitId;
+
+      if (node.unit === 'Scene') {
+        // Leaf node - this is a scene
+        sceneCounter.count++;
+        const scene: FlattenedScene = {
+          sceneNumber: sceneCounter.count,
+          equation: node.equation
+        };
+        
+        // Add parent IDs only if they exist
+        if (currentContext.bookId !== undefined) scene.bookId = currentContext.bookId;
+        if (currentContext.actId !== undefined) scene.actId = currentContext.actId;
+        if (currentContext.chapterId !== undefined) scene.chapterId = currentContext.chapterId;
+        
+        scenes.push(scene);
+      } else if (node.children.length > 0) {
+        // Non-leaf - recurse to find scenes
+        scenes.push(...this.collectScenes(node.children, currentContext, sceneCounter));
+      }
+    }
+
+    return scenes;
   }
   
   /**
@@ -588,4 +695,21 @@ export class TauSpine extends TauTongueInterpreter {
 export function createTauSpine(spark: string, format: SpineFormat, lazyChildren: boolean = false): TauSpineResult {
   const spine = new TauSpine(spark, format);
   return spine.generate(lazyChildren);
+}
+
+/**
+ * Get the hierarchical path for a flattened scene
+ * @param scene The flattened scene
+ * @param separator Optional separator (default: ' › ')
+ * @returns A human-readable path string like "Book 1 › Act 2 › Chapter 3 › Scene 4"
+ */
+export function getPath(scene: FlattenedScene, separator: string = ' › '): string {
+  const parts: string[] = [];
+  
+  if (scene.bookId !== undefined) parts.push(`Book ${scene.bookId}`);
+  if (scene.actId !== undefined) parts.push(`Act ${scene.actId}`);
+  if (scene.chapterId !== undefined) parts.push(`Chapter ${scene.chapterId}`);
+  parts.push(`Scene ${scene.sceneNumber}`);
+  
+  return parts.join(separator);
 }

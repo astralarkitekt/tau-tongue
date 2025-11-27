@@ -1,0 +1,604 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Tau Spine Generator</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+      padding: 2rem;
+    }
+
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+      background: white;
+      border-radius: 12px;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+      overflow: hidden;
+    }
+
+    .header {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      padding: 2rem;
+      text-align: center;
+    }
+
+    .header h1 {
+      font-size: 2.5rem;
+      margin-bottom: 0.5rem;
+    }
+
+    .header p {
+      opacity: 0.9;
+      font-size: 1.1rem;
+    }
+
+    .controls {
+      padding: 2rem;
+      background: #f8f9fa;
+      border-bottom: 2px solid #e9ecef;
+    }
+
+    .form-group {
+      margin-bottom: 1.5rem;
+    }
+
+    label {
+      display: block;
+      font-weight: 600;
+      margin-bottom: 0.5rem;
+      color: #495057;
+    }
+
+    input[type="text"] {
+      width: 100%;
+      padding: 0.75rem;
+      font-size: 1rem;
+      border: 2px solid #dee2e6;
+      border-radius: 6px;
+      transition: border-color 0.3s;
+    }
+
+    input[type="text"]:focus {
+      outline: none;
+      border-color: #667eea;
+    }
+
+    .form-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1rem;
+    }
+
+    select {
+      width: 100%;
+      padding: 0.75rem;
+      font-size: 1rem;
+      border: 2px solid #dee2e6;
+      border-radius: 6px;
+      background: white;
+      cursor: pointer;
+      transition: border-color 0.3s;
+    }
+
+    select:focus {
+      outline: none;
+      border-color: #667eea;
+    }
+
+    .radio-group {
+      display: flex;
+      gap: 1.5rem;
+      margin-top: 0.5rem;
+    }
+
+    .radio-option {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      cursor: pointer;
+    }
+
+    .radio-option input[type="radio"] {
+      cursor: pointer;
+      width: 1.2rem;
+      height: 1.2rem;
+    }
+
+    .radio-option label {
+      margin: 0;
+      cursor: pointer;
+      font-weight: 500;
+    }
+
+    button {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      border: none;
+      padding: 1rem 2rem;
+      font-size: 1.1rem;
+      font-weight: 600;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: transform 0.2s, box-shadow 0.2s;
+      width: 100%;
+    }
+
+    button:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+    }
+
+    button:active {
+      transform: translateY(0);
+    }
+
+    button:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    .output {
+      padding: 2rem;
+      min-height: 400px;
+      max-height: 600px;
+      overflow-y: auto;
+    }
+
+    .output:empty::before {
+      content: "Generate a spine to see results...";
+      color: #adb5bd;
+      font-style: italic;
+      display: block;
+      text-align: center;
+      padding-top: 4rem;
+      font-size: 1.1rem;
+    }
+
+    .stats {
+      background: #e7f5ff;
+      border-left: 4px solid #339af0;
+      padding: 1rem;
+      margin-bottom: 1.5rem;
+      border-radius: 4px;
+    }
+
+    .stats h3 {
+      color: #1864ab;
+      margin-bottom: 0.75rem;
+    }
+
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+      gap: 1rem;
+    }
+
+    .stat-item {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .stat-label {
+      font-size: 0.85rem;
+      color: #495057;
+      margin-bottom: 0.25rem;
+    }
+
+    .stat-value {
+      font-size: 1.25rem;
+      font-weight: 700;
+      color: #1864ab;
+    }
+
+    .proto-equation {
+      background: #fff3bf;
+      border-left: 4px solid #fab005;
+      padding: 1.5rem;
+      margin-bottom: 1.5rem;
+      border-radius: 4px;
+    }
+
+    .proto-equation h3 {
+      color: #e67700;
+      margin-bottom: 0.75rem;
+    }
+
+    .equation {
+      font-family: 'Courier New', monospace;
+      font-size: 1.1rem;
+      color: #495057;
+      background: white;
+      padding: 1rem;
+      border-radius: 4px;
+      overflow-x: auto;
+      margin-top: 0.5rem;
+    }
+
+    .spine-tree {
+      background: #f8f9fa;
+      border-radius: 6px;
+      padding: 1rem;
+    }
+
+    .spine-node {
+      margin-bottom: 0.5rem;
+      padding: 0.75rem;
+      background: white;
+      border-radius: 4px;
+      border-left: 3px solid;
+    }
+
+    .spine-node.depth-0 { border-left-color: #fa5252; margin-left: 0; }
+    .spine-node.depth-1 { border-left-color: #fd7e14; margin-left: 1.5rem; }
+    .spine-node.depth-2 { border-left-color: #fab005; margin-left: 3rem; }
+    .spine-node.depth-3 { border-left-color: #40c057; margin-left: 4.5rem; }
+
+    .node-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 0.5rem;
+    }
+
+    .node-title {
+      font-weight: 600;
+      color: #212529;
+    }
+
+    .node-resonance {
+      font-size: 0.85rem;
+      color: #868e96;
+      background: #f1f3f5;
+      padding: 0.25rem 0.75rem;
+      border-radius: 12px;
+    }
+
+    .node-equation {
+      font-family: 'Courier New', monospace;
+      font-size: 0.9rem;
+      color: #495057;
+      background: #f8f9fa;
+      padding: 0.5rem;
+      border-radius: 3px;
+      overflow-x: auto;
+    }
+
+    .flattened-scenes {
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+    }
+
+    .scene-card {
+      background: white;
+      border: 2px solid #e9ecef;
+      border-radius: 6px;
+      padding: 1rem;
+      transition: transform 0.2s, box-shadow 0.2s;
+    }
+
+    .scene-card:hover {
+      transform: translateX(4px);
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    }
+
+    .scene-number {
+      display: inline-block;
+      background: #667eea;
+      color: white;
+      font-weight: 700;
+      padding: 0.25rem 0.75rem;
+      border-radius: 12px;
+      margin-bottom: 0.75rem;
+      font-size: 0.85rem;
+    }
+
+    .scene-resonance {
+      font-size: 0.9rem;
+      color: #868e96;
+      margin-bottom: 0.5rem;
+    }
+
+    .scene-equation {
+      font-family: 'Courier New', monospace;
+      font-size: 0.95rem;
+      color: #495057;
+      background: #f8f9fa;
+      padding: 0.75rem;
+      border-radius: 4px;
+      overflow-x: auto;
+    }
+
+    .error {
+      background: #ffe3e3;
+      border-left: 4px solid #fa5252;
+      padding: 1rem;
+      border-radius: 4px;
+      color: #c92a2a;
+    }
+
+    .loading {
+      text-align: center;
+      padding: 2rem;
+      color: #868e96;
+    }
+
+    .loading::after {
+      content: '...';
+      animation: dots 1.5s steps(4, end) infinite;
+    }
+
+    @keyframes dots {
+      0%, 20% { content: '.'; }
+      40% { content: '..'; }
+      60%, 100% { content: '...'; }
+    }
+
+    /* Scrollbar styling */
+    .output::-webkit-scrollbar {
+      width: 8px;
+    }
+
+    .output::-webkit-scrollbar-track {
+      background: #f1f3f5;
+    }
+
+    .output::-webkit-scrollbar-thumb {
+      background: #adb5bd;
+      border-radius: 4px;
+    }
+
+    .output::-webkit-scrollbar-thumb:hover {
+      background: #868e96;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>🌀 Tau Spine Generator</h1>
+      <p>Generate narrative structures from symbolic equations</p>
+    </div>
+
+    <div class="controls">
+      <form id="spineForm">
+        <div class="form-group">
+          <label for="spark">Spark (Seed Text)</label>
+          <input 
+            type="text" 
+            id="spark" 
+            name="spark" 
+            placeholder="Enter your story spark (3-512 characters)..."
+            required
+            minlength="3"
+            maxlength="512"
+          />
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label for="format">Spine Format</label>
+            <select id="format" name="format" required>
+              <option value="6">Short (6)</option>
+              <option value="7">Novelette (7)</option>
+              <option value="8">Novella (8)</option>
+              <option value="9" selected>Novel (9)</option>
+              <option value="11">Epic (11)</option>
+              <option value="22">Saga (22)</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label>Display Mode</label>
+            <div class="radio-group">
+              <div class="radio-option">
+                <input type="radio" id="modeFull" name="mode" value="full" checked>
+                <label for="modeFull">Full</label>
+              </div>
+              <div class="radio-option">
+                <input type="radio" id="modeLazy" name="mode" value="lazy">
+                <label for="modeLazy">Lazy</label>
+              </div>
+              <div class="radio-option">
+                <input type="radio" id="modeFlattened" name="mode" value="flattened">
+                <label for="modeFlattened">Flattened</label>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <button type="submit">Generate Spine</button>
+      </form>
+    </div>
+
+    <div class="output" id="output"></div>
+  </div>
+
+  <script type="module">
+    import { TauSpine, SpineFormat, getPath } from '../dist/index.js';
+
+    const form = document.getElementById('spineForm');
+    const output = document.getElementById('output');
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+
+      const spark = document.getElementById('spark').value.trim();
+      const format = parseInt(document.getElementById('format').value);
+      const mode = document.querySelector('input[name="mode"]:checked').value;
+
+      if (!spark) {
+        showError('Please enter a spark text');
+        return;
+      }
+
+      try {
+        showLoading();
+        
+        // Small delay to show loading state
+        await new Promise(resolve => setTimeout(resolve, 100));
+
+        const spine = new TauSpine(spark, format);
+        
+        if (mode === 'flattened') {
+          // Generate full spine first, then flatten
+          const fullResult = spine.generate();
+          const flattenedResult = spine.flatten();
+          renderFlattened(flattenedResult);
+        } else {
+          // Generate with lazy or full loading
+          const result = spine.generate(mode === 'lazy');
+          renderFull(result, mode === 'lazy');
+        }
+
+      } catch (error) {
+        showError(error.message);
+        console.error('Generation error:', error);
+      }
+    });
+
+    function showLoading() {
+      output.innerHTML = '<div class="loading">Generating spine</div>';
+    }
+
+    function showError(message) {
+      output.innerHTML = `<div class="error"><strong>Error:</strong> ${message}</div>`;
+    }
+
+    function renderFull(result, isLazy) {
+      const html = `
+        <div class="stats">
+          <h3>📊 Generation Statistics</h3>
+          <div class="stats-grid">
+            <div class="stat-item">
+              <span class="stat-label">Format</span>
+              <span class="stat-value">${result.format}</span>
+            </div>
+            <div class="stat-item">
+              <span class="stat-label">Total Nodes</span>
+              <span class="stat-value">${result.stats.totalNodes}</span>
+            </div>
+            <div class="stat-item">
+              <span class="stat-label">Max Depth</span>
+              <span class="stat-value">${result.stats.maxDepth}</span>
+            </div>
+            <div class="stat-item">
+              <span class="stat-label">Generation Time</span>
+              <span class="stat-value">${result.stats.generationTime}ms</span>
+            </div>
+            <div class="stat-item">
+              <span class="stat-label">Mode</span>
+              <span class="stat-value">${isLazy ? 'Lazy' : 'Full'}</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="proto-equation">
+          <h3>⚡ Proto-Equation</h3>
+          <div><strong>Spark:</strong> "${result.spark}"</div>
+          <div><strong>Resonance:</strong> ${result.protoEquation.resonance} (${result.protoEquation.digitalSum})</div>
+          <div><strong>Archetype:</strong> ${result.protoEquation.archetype}</div>
+          <div class="equation">${escapeHtml(result.protoEquation.symbolicEquation)}</div>
+        </div>
+
+        <div class="spine-tree">
+          <h3 style="margin-bottom: 1rem;">🌳 Spine Tree ${isLazy ? '(Lazy - Children Not Loaded)' : ''}</h3>
+          ${renderSpineNodes(result.spine)}
+        </div>
+      `;
+
+      output.innerHTML = html;
+    }
+
+    function renderFlattened(result) {
+      const html = `
+        <div class="stats">
+          <h3>📊 Generation Statistics</h3>
+          <div class="stats-grid">
+            <div class="stat-item">
+              <span class="stat-label">Format</span>
+              <span class="stat-value">${result.format}</span>
+            </div>
+            <div class="stat-item">
+              <span class="stat-label">Total Scenes</span>
+              <span class="stat-value">${result.stats.totalScenes}</span>
+            </div>
+            <div class="stat-item">
+              <span class="stat-label">Total Nodes</span>
+              <span class="stat-value">${result.stats.totalNodes}</span>
+            </div>
+            <div class="stat-item">
+              <span class="stat-label">Max Depth</span>
+              <span class="stat-value">${result.stats.maxDepth}</span>
+            </div>
+            <div class="stat-item">
+              <span class="stat-label">Generation Time</span>
+              <span class="stat-value">${result.stats.generationTime}ms</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="proto-equation">
+          <h3>⚡ Proto-Equation</h3>
+          <div><strong>Spark:</strong> "${result.spark}"</div>
+          <div><strong>Resonance:</strong> ${result.protoEquation.resonance} (${result.protoEquation.digitalSum})</div>
+          <div><strong>Archetype:</strong> ${result.protoEquation.archetype}</div>
+          <div class="equation">${escapeHtml(result.protoEquation.symbolicEquation)}</div>
+        </div>
+
+        <div style="margin-top: 1.5rem;">
+          <h3 style="margin-bottom: 1rem;">🎬 Scene Equations (${result.scenes.length} scenes)</h3>
+          <div class="flattened-scenes">
+            ${result.scenes.map((scene) => `
+              <div class="scene-card">
+                <div class="scene-number">Scene ${scene.sceneNumber}</div>
+                <div class="scene-resonance">
+                  ${getPath(scene)} • ${scene.equation.resonance} (${scene.equation.digitalSum}) • ${scene.equation.archetype}
+                </div>
+                <div class="scene-equation">${escapeHtml(scene.equation.symbolicEquation)}</div>
+              </div>
+            `).join('')}
+          </div>
+        </div>
+      `;
+
+      output.innerHTML = html;
+    }
+
+    function renderSpineNodes(nodes, depth = 0) {
+      return nodes.map(node => `
+        <div class="spine-node depth-${depth}">
+          <div class="node-header">
+            <div class="node-title">${node.unit} ${node.unitId}</div>
+            <div class="node-resonance">${node.resonance} • ${node.equation.archetype}</div>
+          </div>
+          <div class="node-equation">${escapeHtml(node.equation.symbolicEquation)}</div>
+          ${node.children.length > 0 ? renderSpineNodes(node.children, depth + 1) : ''}
+        </div>
+      `).join('');
+    }
+
+    function escapeHtml(text) {
+      const div = document.createElement('div');
+      div.textContent = text;
+      return div.innerHTML;
+    }
+
+    // Set default spark for demo
+    document.getElementById('spark').value = "A hero's journey begins";
+  </script>
+</body>
+</html>

@@ -8,10 +8,12 @@ export type {
 } from './tau-tongue/TauTongueInterpreter_v2.js';
 
 // TauSpine exports
-export { TauSpine, createTauSpine, SpineFormat } from './tau-tongue/TauSpine.js';
+export { TauSpine, createTauSpine, SpineFormat, getPath } from './tau-tongue/TauSpine.js';
 export type {
   TauSpineNode,
   TauSpineResult,
+  FlattenedTauSpineResult,
+  FlattenedScene,
   FormatData,
   UnitSpec,
   ArchetypalEntry,
