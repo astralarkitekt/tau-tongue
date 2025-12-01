@@ -1,6 +1,6 @@
 {
   "name": "@astralarkitekt/tau-tongue",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "author": "Astral Arkitekt <astralarkitekt@gmail.com>",
   "description": "Tau-Tongue is a symbolic narrative algebra for meaning-making and storytelling, designed to help users construct and explore narratives through a structured framework.",
   "type": "module",
@@ -27,6 +27,7 @@
   },
   "keywords": [],
   "dependencies": {
-    "canvas": "^3.2.0"
+    "canvas": "^3.2.0",
+    "hash-wasm": "^4.12.0"
   }
 }

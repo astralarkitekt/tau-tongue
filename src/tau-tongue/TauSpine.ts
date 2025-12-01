@@ -74,6 +74,27 @@ export interface TauSpineResult {
   };
 }
 
+export interface FlattenedScene {
+  sceneNumber: number;
+  equation: TauTongueResult;
+  bookId?: number;
+  actId?: number;
+  chapterId?: number;
+}
+
+export interface FlattenedTauSpineResult {
+  spark: string;
+  format: string;
+  protoEquation: TauTongueResult;
+  scenes: FlattenedScene[];
+  stats: {
+    totalScenes: number;
+    totalNodes: number;
+    maxDepth: number;
+    generationTime: number;
+  };
+}
+
 export enum SpineFormat {
   SHORT = 6,
   NOVELETTE = 7,
@@ -88,6 +109,7 @@ export class TauSpine extends TauTongueInterpreter {
   
   private nodeCount = 0;
   private maxDepthReached = 0;
+  private generatedResult: TauSpineResult | null = null;
   
   constructor(
     private spark: string,
@@ -117,14 +139,14 @@ export class TauSpine extends TauTongueInterpreter {
   /**
    * Generate the complete tau spine structure (lazy-compatible)
    */
-  public generate(lazyChildren: boolean = false): TauSpineResult {
+  public async generate(lazyChildren: boolean = false): Promise<TauSpineResult> {
     const startTime = Date.now();
     this.nodeCount = 0;
     this.maxDepthReached = 0;
     
     const protoEquation = this.interpret(this.spark);
     
-    const spine = this.generateLevel(
+    const spine = await this.generateLevel(
       this.spark,
       this.formatData.unitHierarchy[0], // Start with the primary unit
       0, // depth
@@ -132,7 +154,7 @@ export class TauSpine extends TauTongueInterpreter {
       lazyChildren
     );
     
-    return {
+    this.generatedResult = {
       spark: this.spark,
       format: this.formatData.format,
       protoEquation,
@@ -143,12 +165,14 @@ export class TauSpine extends TauTongueInterpreter {
         generationTime: Date.now() - startTime
       }
     };
+    
+    return this.generatedResult;
   }
 
   /**
    * Generate children for a specific node (for lazy loading)
    */
-  public generateChildren(node: TauSpineNode): TauSpineNode[] {
+  public async generateChildren(node: TauSpineNode): Promise<TauSpineNode[]> {
     if (node.childrenLoaded || !node.hasChildren) {
       return node.children;
     }
@@ -166,7 +190,7 @@ export class TauSpine extends TauTongueInterpreter {
       return [];
     }
 
-    node.children = this.generateLevel(
+    node.children = await this.generateLevel(
       braid.toString(),
       childUnitType,
       node.depth + 1,
@@ -177,17 +201,100 @@ export class TauSpine extends TauTongueInterpreter {
     node.childrenLoaded = true;
     return node.children;
   }
+
+  /**
+   * Flatten the spine to return only proto-equation and scene equations
+   * Auto-loads all children if lazy loading was used
+   */
+  public flatten(): FlattenedTauSpineResult {
+    if (!this.generatedResult) {
+      throw new Error('Must call generate() before flatten()');
+    }
+
+    // Ensure all children are loaded
+    this.ensureFullyLoaded(this.generatedResult.spine);
+
+    // Collect all scene equations
+    const scenes = this.collectScenes(this.generatedResult.spine);
+
+    return {
+      spark: this.generatedResult.spark,
+      format: this.generatedResult.format,
+      protoEquation: this.generatedResult.protoEquation,
+      scenes,
+      stats: {
+        totalScenes: scenes.length,
+        totalNodes: this.generatedResult.stats.totalNodes,
+        maxDepth: this.generatedResult.stats.maxDepth,
+        generationTime: this.generatedResult.stats.generationTime
+      }
+    };
+  }
+
+  /**
+   * Ensure all nodes in the tree have their children loaded
+   */
+  private ensureFullyLoaded(nodes: TauSpineNode[]): void {
+    for (const node of nodes) {
+      if (node.hasChildren && !node.childrenLoaded) {
+        this.generateChildren(node);
+      }
+      if (node.children.length > 0) {
+        this.ensureFullyLoaded(node.children);
+      }
+    }
+  }
+
+  /**
+   * Recursively collect all scene equations from the spine tree
+   */
+  private collectScenes(
+    nodes: TauSpineNode[],
+    parentContext: { bookId?: number; actId?: number; chapterId?: number } = {},
+    sceneCounter: { count: number } = { count: 0 }
+  ): FlattenedScene[] {
+    const scenes: FlattenedScene[] = [];
+
+    for (const node of nodes) {
+      // Update context based on current node's unit type
+      const currentContext = { ...parentContext };
+      if (node.unit === 'Book') currentContext.bookId = node.unitId;
+      if (node.unit === 'Act') currentContext.actId = node.unitId;
+      if (node.unit === 'Chapter') currentContext.chapterId = node.unitId;
+
+      if (node.unit === 'Scene') {
+        // Leaf node - this is a scene
+        sceneCounter.count++;
+        const scene: FlattenedScene = {
+          sceneNumber: sceneCounter.count,
+          equation: node.equation
+        };
+        
+        // Add parent IDs only if they exist
+        if (currentContext.bookId !== undefined) scene.bookId = currentContext.bookId;
+        if (currentContext.actId !== undefined) scene.actId = currentContext.actId;
+        if (currentContext.chapterId !== undefined) scene.chapterId = currentContext.chapterId;
+        
+        scenes.push(scene);
+      } else if (node.children.length > 0) {
+        // Non-leaf - recurse to find scenes
+        scenes.push(...this.collectScenes(node.children, currentContext, sceneCounter));
+      }
+    }
+
+    return scenes;
+  }
   
   /**
    * Generate nodes at a specific hierarchical level (unit-based recursive breakdown)
    */
-  private generateLevel(
+  private async generateLevel(
     parentSpark: string,
     unitType: string,
     depth: number,
     formatData: FormatData,
     lazyChildren: boolean = false
-  ): TauSpineNode[] {
+  ): Promise<TauSpineNode[]> {
     if (depth >= this.maxDepth) return [];
     if (this.nodeCount > 10000) return [];
     
@@ -200,12 +307,12 @@ export class TauSpine extends TauTongueInterpreter {
     const unitCount = this.calculateChildUnitCount(unitSpec, parentSpark, formatData);
     if (unitCount <= 0) return [];
     
-    let currentSpark = this.cipherCycle(this.extractNumeroCipher(parentSpark).join(''), calculateDigitalRoot(this.extractNumeroCipher(parentSpark).join(''))!);
+    let currentSpark = await this.cipherCycle(this.extractNumeroCipher(parentSpark).join(''), calculateDigitalRoot(this.extractNumeroCipher(parentSpark).join(''))!);
     const nodes: TauSpineNode[] = [];
     
     for (let i = 0; i < unitCount; i++) {
       // Generate unique equation for this unit
-      const nodeSpark = this.evolveSparkForNode(currentSpark, i, depth);
+      const nodeSpark = await this.evolveSparkForNode(currentSpark, i, depth);
       const unitEquation = this.generateUnitEquation(nodeSpark);
       const numeroCipher = this.extractNumeroCipher(nodeSpark);
       const resonance = calculateDigitalRoot(numeroCipher.join(''))!;
@@ -231,7 +338,7 @@ export class TauSpine extends TauTongueInterpreter {
         node.hasChildren = true;
         if (!lazyChildren) {
           // Recursively generate children
-          node.children = this.generateLevel(
+          node.children = await this.generateLevel(
             nodeSpark,
             unitSpec.childUnit,
             depth + 1,
@@ -296,16 +403,16 @@ export class TauSpine extends TauTongueInterpreter {
   /**
    * Evolve spark for each node for true variability
    */
-  private evolveSparkForNode(
+  private  async evolveSparkForNode(
     baseSpark: string,
     index: number,
     depth: number
-  ): string {
+  ): Promise<string> {
     // Use cipherCycle and add index/depth for more entropy
     const base = baseSpark + String(index) + String(depth);
     const numeroCipher = this.extractNumeroCipher(base);
     const resonance = calculateDigitalRoot(numeroCipher.join(''))!;
-    return this.cipherCycle(numeroCipher.join(''), resonance);
+    return await this.cipherCycle(numeroCipher.join(''), resonance);
   }
   
   /**
@@ -329,8 +436,8 @@ export class TauSpine extends TauTongueInterpreter {
   /**
    * Cipher cycling - evolve the numerical signature
    */
-  private cipherCycle(numeroCipher: string, resonance: number): string {
-    return pythagoreanCipherCycle(numeroCipher, resonance);
+  private async cipherCycle(numeroCipher: string, resonance: number): Promise<string> {
+    return await pythagoreanCipherCycle(numeroCipher, resonance);
   }
   
   /**
@@ -585,7 +692,24 @@ export class TauSpine extends TauTongueInterpreter {
 }
 
 // Export convenience function
-export function createTauSpine(spark: string, format: SpineFormat, lazyChildren: boolean = false): TauSpineResult {
+export async function createTauSpine(spark: string, format: SpineFormat, lazyChildren: boolean = false): Promise<TauSpineResult> {
   const spine = new TauSpine(spark, format);
-  return spine.generate(lazyChildren);
+  return await spine.generate(lazyChildren);
+}
+
+/**
+ * Get the hierarchical path for a flattened scene
+ * @param scene The flattened scene
+ * @param separator Optional separator (default: ' › ')
+ * @returns A human-readable path string like "Book 1 › Act 2 › Chapter 3 › Scene 4"
+ */
+export function getPath(scene: FlattenedScene, separator: string = ' › '): string {
+  const parts: string[] = [];
+  
+  if (scene.bookId !== undefined) parts.push(`Book ${scene.bookId}`);
+  if (scene.actId !== undefined) parts.push(`Act ${scene.actId}`);
+  if (scene.chapterId !== undefined) parts.push(`Chapter ${scene.chapterId}`);
+  parts.push(`Scene ${scene.sceneNumber}`);
+  
+  return parts.join(separator);
 }

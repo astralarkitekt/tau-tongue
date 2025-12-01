@@ -1,3 +1,5 @@
+import { sha256 } from 'hash-wasm';
+
 // Mapping of letters to numbers
 export const numerologyMap: Record<string, number> = {
   A: 1,
@@ -29,6 +31,11 @@ export const numerologyMap: Record<string, number> = {
 };
 
 export const convertToNumbers = (text: string): string => {
+  // if the provided string contains NO letters and IS all numbers, return it as is
+  if (/^[0-9\s]+$/.test(text)) {
+    return text;
+  }
+
   return text
     .toUpperCase()
     .split("")
@@ -86,15 +93,20 @@ export function integerStringFromBase36(bs: string): string {
 /**
  * Cipher cycling - evolve the numerical signature
  */
-export const cipherCycle = (numeroCipher: string, resonance: number): string => {
+export const cipherCycle = async (numeroCipher: string, resonance: number): Promise<string> => {
 
   const digits = numeroCipher.split('').map(Number);
+
+  // create a sha256 hash of the input numeroCipher 
+  const hash = await sha256(numeroCipher);
+  const BigIntHash = BigInt('0x' + hash);
+  console.log(BigIntHash.toString())
 
   const evolved: number[] = [];
   
   for (let i = 0; i < digits.length; i++) {
     const digit = digits[i];
-    let newDigit = calculateDigitalRoot((digit ** resonance + resonance ).toString());
+    let newDigit = calculateDigitalRoot((BigIntHash / BigInt((digit + resonance + i) * resonance)).toString());
     
     if (newDigit === null) {
       throw new Error(`Invalid digit encountered: ${digit}`);
