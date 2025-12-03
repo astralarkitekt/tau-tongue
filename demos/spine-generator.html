@@ -460,7 +460,7 @@
           renderFlattened(flattenedResult);
         } else {
           // Generate with lazy or full loading
-          const result = spine.generate(mode === 'lazy');
+          const result = await spine.generate(mode === 'lazy');
           renderFull(result, mode === 'lazy');
         }
 

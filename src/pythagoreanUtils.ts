@@ -1,5 +1,3 @@
-import { sha256 } from 'hash-wasm';
-
 // Mapping of letters to numbers
 export const numerologyMap: Record<string, number> = {
   A: 1,
@@ -91,6 +89,24 @@ export function integerStringFromBase36(bs: string): string {
 }
 
 /**
+ * SHA-256 hash that works in both Node.js and browser environments
+ */
+async function sha256Hash(input: string): Promise<string> {
+  // Check if we're in a browser environment
+  if (typeof window !== 'undefined' && window.crypto && window.crypto.subtle) {
+    const encoder = new TextEncoder();
+    const data = encoder.encode(input);
+    const hashBuffer = await window.crypto.subtle.digest('SHA-256', data);
+    const hashArray = Array.from(new Uint8Array(hashBuffer));
+    return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+  }
+  
+  // Node.js environment - dynamically import hash-wasm
+  const { sha256 } = await import('hash-wasm');
+  return sha256(input);
+}
+
+/**
  * Cipher cycling - evolve the numerical signature
  */
 export const cipherCycle = async (numeroCipher: string, resonance: number): Promise<string> => {
@@ -98,7 +114,7 @@ export const cipherCycle = async (numeroCipher: string, resonance: number): Prom
   const digits = numeroCipher.split('').map(Number);
 
   // create a sha256 hash of the input numeroCipher 
-  const hash = await sha256(numeroCipher);
+  const hash = await sha256Hash(numeroCipher);
   const BigIntHash = BigInt('0x' + hash);
 
   const evolved: number[] = [];
