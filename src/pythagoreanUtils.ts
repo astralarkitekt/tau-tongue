@@ -100,7 +100,6 @@ export const cipherCycle = async (numeroCipher: string, resonance: number): Prom
   // create a sha256 hash of the input numeroCipher 
   const hash = await sha256(numeroCipher);
   const BigIntHash = BigInt('0x' + hash);
-  console.log(BigIntHash.toString())
 
   const evolved: number[] = [];
   

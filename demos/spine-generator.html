@@ -455,7 +455,7 @@
         
         if (mode === 'flattened') {
           // Generate full spine first, then flatten
-          const fullResult = spine.generate();
+          const fullResult = await spine.generate();
           const flattenedResult = spine.flatten();
           renderFlattened(flattenedResult);
         } else {
