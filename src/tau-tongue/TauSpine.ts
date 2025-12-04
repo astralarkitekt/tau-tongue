@@ -267,7 +267,7 @@ export class TauSpine extends TauTongueInterpreter {
         sceneCounter.count++;
         const scene: FlattenedScene = {
           sceneNumber: sceneCounter.count,
-          equation: node.equation
+          equation: node.equation,
         };
         
         // Add parent IDs only if they exist

@@ -316,7 +316,7 @@ export class TauTongueInterpreter {
     return result;
   }
 
-  private getFunctionDescription(func: string): string {
+  public getFunctionDescription(func: string): string {
     // slice the symbol from the function string (0, 1)
     const crucibleOperator = func.slice(0, 1);
     // get the metaphorical meaning of the operator
@@ -356,13 +356,16 @@ export class TauTongueInterpreter {
     return description;
   }
 
-  private getCrucible(symbolicEquation: string, digitalSum: number, resonance: string, archetype: string): string {
+  public getCrucible(symbolicEquation: string, digitalSum: number, resonance: string, archetype: string): string {
     // get the crucible operator from the symbolic equation
     const crucibleOperator = symbolicEquation.slice(0, 1);
     const masterResonance = digitalSum;
     const theme = resonance;
 
-    return `${crucibleOperator}(${masterResonance}) ${theme}, ${archetype}`;
+    const crucible = `${crucibleOperator}(${masterResonance})`;
+    const description = this.getFunctionDescription(crucible);
+
+    return crucible + " - " + description;
   }
 
   private getBraid(symbolicEquation: string): string {
