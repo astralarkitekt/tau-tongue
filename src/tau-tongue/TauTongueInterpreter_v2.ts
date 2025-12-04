@@ -16,6 +16,7 @@ export interface TauTongueResult {
   symbolicEquation: string;
   crucible: string;
   crucibleDescription: string;
+  antagonist: TauTongueAntagonist;
   braid: BraidInterpretation[];
   inflectionPoints: InflectionPoint[];
   interpretation: string;
@@ -24,9 +25,20 @@ export interface TauTongueResult {
   narrativeInterpretation: string;
 }
 
+export interface TauTongueAntagonist {
+  braid: string;
+  description: string;
+  crucible: string;
+  archetype: string;
+  archetypeDescription: string;
+  resonance: string;
+  resonanceMeaning: string;
+}
+
 export interface BraidInterpretation {
   equation: string;
   description: string;
+  hasInflectionPoint?: boolean;
 }
 
 export interface InflectionPoint {
@@ -132,30 +144,6 @@ export class TauTongueInterpreter {
     };
     return digitalRoot(sum);
   }
-
-  /**
-   * DEPRECATED: Generate symbolic operators equation
-   */
-  // private getSymbolicOperators(masterResonance: number, digits: number[]): string {
-    
-  //   const segments: string[] = [];
-  //   let cursor = 0;
-  //   let lastLength = masterResonance;
-    
-  //   while (cursor < digits.length) {
-  //     const sliceLen = Math.max(1, lastLength + (lastLength % 2 === 0 ? -1 : 1));
-  //     const chunk = digits.slice(cursor, cursor + sliceLen);
-  //     if (chunk.length === 0) break;
-  //     const index = parseInt(chunk.join('')) % this.symbolMap.length;
-  //     const op = this.symbolMap[index];
-  //     segments.push(this.wrap(op, chunk.join(',')));
-  //     lastLength = chunk.length;
-  //     cursor += sliceLen;
-  //   }
-    
-  //   const outerOp = this.symbolMap[(digits.reduce((a, b) => a + b, 0) + masterResonance) % this.symbolMap.length];
-  //   return this.wrap(outerOp, segments.join(','));
-  // }
 
   private getSymbolicOperators(masterResonance: number, digits: number[]): string {
     const numeroCipher = [...digits]; // Create a proper copy
@@ -282,6 +270,8 @@ export class TauTongueInterpreter {
       return { "equation": line, "description": this.getFunctionDescription(line) }
     });
 
+    const antagonist = this.getAntagonist(symbolicEquation);
+
     // Calculate word and character counts
     const wordCount = input.trim() === '' ? 0 : input.trim().split(/\s+/).length;
     const charCount = input.length;
@@ -303,6 +293,7 @@ export class TauTongueInterpreter {
       interpretation,
       crucible,
       crucibleDescription,
+      antagonist,
       braid,
       inflectionPoints: [], // Will be populated below
       wordCount,
@@ -368,6 +359,59 @@ export class TauTongueInterpreter {
     return crucible + " - " + description;
   }
 
+  public getMicroCrucible(braidFunction: string): string {
+    const operator = braidFunction.slice(0, 1);
+    const braidDigits = braidFunction
+      .split('')
+      .filter(char => /[1-9]/.test(char))
+      .map(Number)
+      .join('');
+    const digitalRoot = calculateDigitalRoot(braidDigits);
+    if (digitalRoot === null) {
+      console.error("Digital root is null");
+      throw new Error("Digital root is null");
+    }
+
+    const resonance = this.getSymbolicMeaning(digitalRoot);
+    const archetype = this.archetypeMap[digitalRoot] || 'The Unknown';
+
+    return this.getCrucible(braidFunction, digitalRoot, resonance, archetype);
+  }
+
+  public getAntagonist(symbolicEquation: string): TauTongueAntagonist {
+    // the antagonist is the LONGEST braid function in the symbolic equation
+    const braid = this.getBraid(symbolicEquation).split('\n');
+    let longestFunction = '';
+    braid.forEach(func => {
+      if (func.length > longestFunction.length) {
+        longestFunction = func;
+      }
+    });
+
+    // get all digits from the longest function
+    const antagonistDigits = longestFunction
+      .split('')
+      .filter(char => /[1-9]/.test(char))
+      .map(Number)
+      .join('');
+
+    const digitalRoot = calculateDigitalRoot(antagonistDigits);
+    const resonance = this.getSymbolicMeaning(digitalRoot || 0);
+    const resonanceMeaning = this.resonanceDescriptions[resonance] || 'Unknown resonance';
+    const archetype = this.archetypeMap[digitalRoot || 0] || 'The Unknown';
+    const archetypeDescription = this.archetypeDescriptions[archetype] || 'Unknown archetype';
+
+    return {
+      braid: longestFunction,
+      description: this.getFunctionDescription(longestFunction),
+      crucible: this.getCrucible(longestFunction, digitalRoot || 0, resonance, archetype),
+      archetype,
+      archetypeDescription,
+      resonance,
+      resonanceMeaning
+    };
+  }
+
   private getBraid(symbolicEquation: string): string {
     // the braid is enclosed in square brackets and includes everything between the square brackets
     const braid = symbolicEquation.slice(symbolicEquation.indexOf('[') + 1, symbolicEquation.indexOf(']')).replace(/\),/g, ")\n");
@@ -406,6 +450,7 @@ export class TauTongueInterpreter {
             digit,
             interferenceDigit
           });
+          result.braid[braidIndex].hasInflectionPoint = true;
         }
       });
     });
