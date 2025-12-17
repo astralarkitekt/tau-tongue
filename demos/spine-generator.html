@@ -150,6 +150,21 @@
       transform: none;
     }
 
+    .download-btn {
+      background: linear-gradient(135deg, #20c997 0%, #0ca678 100%);
+      margin-top: 1rem;
+      display: none;
+    }
+
+    .download-btn:hover {
+      box-shadow: 0 4px 12px rgba(12, 166, 120, 0.4);
+    }
+
+    .download-btn-container {
+      padding: 0 2rem 1rem 2rem;
+      background: #f8f9fa;
+    }
+
     .output {
       padding: 2rem;
       min-height: 400px;
@@ -424,7 +439,15 @@
       </form>
     </div>
 
+    <div class="download-btn-container">
+      <button class="download-btn" id="downloadBtnTop">📥 Download Markdown</button>
+    </div>
+
     <div class="output" id="output"></div>
+
+    <div class="download-btn-container">
+      <button class="download-btn" id="downloadBtnBottom">📥 Download Markdown</button>
+    </div>
   </div>
 
   <script type="module">
@@ -432,6 +455,8 @@
 
     const form = document.getElementById('spineForm');
     const output = document.getElementById('output');
+    let currentResult = null;
+    let currentMode = null;
 
     form.addEventListener('submit', async (e) => {
       e.preventDefault();
@@ -457,12 +482,21 @@
           // Generate full spine first, then flatten
           const fullResult = await spine.generate();
           const flattenedResult = spine.flatten();
+          currentResult = flattenedResult;
+          currentMode = mode;
           renderFlattened(flattenedResult);
         } else {
           // Generate with lazy or full loading
           const result = await spine.generate(mode === 'lazy');
+          currentResult = result;
+          currentMode = mode;
           renderFull(result, mode === 'lazy');
         }
+
+        // Show download buttons
+        document.querySelectorAll('.download-btn').forEach(btn => {
+          btn.style.display = 'block';
+        });
 
       } catch (error) {
         showError(error.message);
@@ -476,7 +510,119 @@
 
     function showError(message) {
       output.innerHTML = `<div class="error"><strong>Error:</strong> ${message}</div>`;
+      // Hide download buttons on error
+      document.querySelectorAll('.download-btn').forEach(btn => {
+        btn.style.display = 'none';
+      });
     }
+
+    function generateMarkdown(result, mode) {
+      let md = `# Tau Spine Generation\n\n`;
+      
+      // Spark
+      md += `## Spark\n\n`;
+      md += `"${result.spark}"\n\n`;
+      
+      // Format
+      md += `## Format\n\n`;
+      md += `${result.format}\n\n`;
+      
+      // Proto-Equation
+      md += `## Proto-Equation\n\n`;
+      md += `**Resonance:** ${result.protoEquation.resonance} (${result.protoEquation.digitalSum})\n\n`;
+      md += `**Archetype:** ${result.protoEquation.archetype}\n\n`;
+      md += `**Crucible:** \`${result.protoEquation.crucible}\`\n\n`;
+      md += `\`\`\`\n${result.protoEquation.symbolicEquation}\n\`\`\`\n\n`;
+      
+      // Antagonist (if available)
+      if (result.protoEquation.antagonist) {
+        const ant = result.protoEquation.antagonist;
+        md += `## Antagonist\n\n`;
+        md += `**Braid:** \`${ant.braid}\`\n\n`;
+        md += `**Description:** ${ant.description}\n\n`;
+        md += `**Crucible:** \`${ant.crucible}\`\n\n`;
+        md += `**Archetype:** ${ant.archetype}\n\n`;
+        md += `**Archetype Description:** ${ant.archetypeDescription}\n\n`;
+        md += `**Resonance:** ${ant.resonance}\n\n`;
+        md += `**Resonance Meaning:** ${ant.resonanceMeaning}\n\n`;
+      }
+      
+      // Spine
+      md += `## Spine\n\n`;
+      
+      if (mode === 'flattened') {
+        // Flattened mode - list all scenes
+        md += `### Scenes (${result.scenes.length} total)\n\n`;
+        result.scenes.forEach((scene, idx) => {
+          md += `#### Scene ${scene.sceneNumber}\n\n`;
+          md += `**Path:** ${getPath(scene)}\n\n`;
+          md += `**Resonance:** ${scene.equation.resonance} (${scene.equation.digitalSum})\n\n`;
+          md += `**Archetype:** ${scene.equation.archetype}\n\n`;
+          md += `**Crucible:** \`${scene.equation.crucible}\`\n\n`;
+        });
+      } else {
+        // Tree mode - render hierarchically
+        function renderNodeMarkdown(node, depth = 0) {
+          const indent = '    '.repeat(depth);
+          const headerLevel = depth + 3; // Start at ###
+          const header = '#'.repeat(Math.min(headerLevel, 6));
+          
+          let nodeMd = `${indent}${header} ${node.unit} ${node.unitId}\n\n`;
+          nodeMd += `${indent}**Resonance:** ${node.resonance}\n\n`;
+          nodeMd += `${indent}**Archetype:** ${node.equation.archetype}\n\n`;
+          nodeMd += `${indent}**Crucible:** \`${node.equation.crucible}\`\n\n`;
+          
+          if (mode === 'lazy' && node.children.length === 0) {
+            nodeMd += `${indent}*Children not loaded (lazy mode)*\n\n`;
+          } else if (node.children.length > 0) {
+            node.children.forEach(child => {
+              nodeMd += renderNodeMarkdown(child, depth + 1);
+            });
+          }
+          
+          return nodeMd;
+        }
+        
+        result.spine.forEach(node => {
+          md += renderNodeMarkdown(node, 0);
+        });
+      }
+      
+      // Stats
+      md += `## Generation Statistics\n\n`;
+      md += `- **Total Nodes:** ${result.stats.totalNodes}\n`;
+      if (result.stats.totalScenes) {
+        md += `- **Total Scenes:** ${result.stats.totalScenes}\n`;
+      }
+      md += `- **Max Depth:** ${result.stats.maxDepth}\n`;
+      md += `- **Generation Time:** ${result.stats.generationTime}ms\n`;
+      md += `- **Mode:** ${mode === 'flattened' ? 'Flattened' : mode === 'lazy' ? 'Lazy' : 'Full'}\n`;
+      
+      return md;
+    }
+
+    function downloadMarkdown() {
+      if (!currentResult) {
+        alert('No spine generated yet');
+        return;
+      }
+      
+      const markdown = generateMarkdown(currentResult, currentMode);
+      const blob = new Blob([markdown], { type: 'text/markdown' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      const fileName = `tau-spine-${currentResult.spark.slice(0, 30).replace(/[^a-zA-Z0-9]/g, '-')}.md`;
+      a.download = fileName;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    }
+
+    // Set up download button click handlers
+    document.getElementById('downloadBtnTop').addEventListener('click', downloadMarkdown);
+    document.getElementById('downloadBtnBottom').addEventListener('click', downloadMarkdown);
 
     function renderFull(result, isLazy) {
       const html = `
