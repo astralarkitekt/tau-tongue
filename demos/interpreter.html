@@ -247,6 +247,33 @@
       font-family: 'Courier New', monospace;
     }
 
+    .braid-dominant {
+      font-weight: bold;
+      color: #667eea;
+      text-transform: uppercase;
+      font-size: 0.85rem;
+      letter-spacing: 0.5px;
+      margin-bottom: 0.5rem;
+    }
+
+    .braid-texture {
+      margin-top: 0.5rem;
+      padding-top: 0.5rem;
+      border-top: 1px solid #e9ecef;
+      font-size: 0.85rem;
+      color: #6c757d;
+    }
+
+    .braid-texture-label {
+      font-weight: 600;
+      margin-right: 0.5rem;
+    }
+
+    .texture-item {
+      display: inline;
+      color: #495057;
+    }
+
     .inflection-list {
       display: flex;
       flex-direction: column;
@@ -411,13 +438,39 @@
       
       // Braid Interpretation
       md += `## Braid Interpretation\n\n`;
+      const interpreter = new TauTongueInterpreter();
       result.braid.forEach((b, i) => {
         md += `### Braid ${i + 1}${b.hasInflectionPoint ? ' (Inflection Point)' : ''}\n\n`;
+        
+        // Extract narrative palette
+        let narrativePalette = null;
+        try {
+          narrativePalette = interpreter.extractNarrativePalette(b.equation);
+        } catch (e) {
+          console.warn('Could not extract narrative palette:', e);
+        }
+        
+        if (narrativePalette) {
+          md += `**${narrativePalette.dominant.toUpperCase()}**\n\n`;
+        }
+        
         md += `**Equation:** \`${b.equation}\`\n\n`;
         md += `**Description:** ${b.description}\n\n`;
-        const microCrucibleMatch = b.equation.match(/^(.)(\(\d+)/);
-        if (microCrucibleMatch) {
-          md += `**Micro-Crucible:** \`${microCrucibleMatch[1]}${microCrucibleMatch[2]})\`\n\n`;
+        
+        const microCrucible = interpreter.getMicroCrucible(b.equation);
+        if (microCrucible) {
+          md += `**Micro-Crucible:** \`${microCrucible}\`\n\n`;
+        }
+        
+        if (narrativePalette) {
+          const allFunctions = [
+            { function: narrativePalette.dominant, weight: narrativePalette.dominantWeight },
+            ...narrativePalette.texture
+          ];
+          const textureList = allFunctions.map(t => 
+            `${t.function}(${Math.round(t.weight * 100)}%)`
+          ).join(', ');
+          md += `**Narrative Texture:** ${textureList}\n\n`;
         }
       });
       
@@ -598,13 +651,33 @@
                 const interpreter = new TauTongueInterpreter();
                 const microCrucible = interpreter.getMicroCrucible(b.equation);
                 
+                let narrativePalette = null;
+                try {
+                  narrativePalette = interpreter.extractNarrativePalette(b.equation);
+                } catch (e) {
+                  console.warn('Could not extract narrative palette:', e);
+                }
+                
+                let textureList = '';
+                if (narrativePalette) {
+                  const allFunctions = [
+                    { function: narrativePalette.dominant, weight: narrativePalette.dominantWeight },
+                    ...narrativePalette.texture
+                  ];
+                  textureList = allFunctions.map(t => 
+                    `${t.function}(${Math.round(t.weight * 100)}%)`
+                  ).join(', ');
+                }
+                
                 return `
                   <div class="braid-item${b.hasInflectionPoint ? ' has-inflection' : ''}">
+                    ${narrativePalette ? `<div class="braid-dominant">${narrativePalette.dominant.toUpperCase()}</div>` : ''}
                     <div class="braid-equation">
                       ${b.hasInflectionPoint ? '<strong>' : ''}${escapeHtml(b.equation)}${b.hasInflectionPoint ? ' (Inflection Point)</strong>' : ''}
                     </div>
                     <div class="braid-description">${b.description}</div>
                     ${microCrucible ? `<div class="braid-micro-crucible"><strong>Micro-Crucible:</strong> <code>${escapeHtml(microCrucible)}</code></div>` : ''}
+                    ${textureList ? `<div class="braid-texture"><span class="braid-texture-label">Narrative Texture:</span><span class="texture-item">${textureList}</span></div>` : ''}
                   </div>
                 `;
               }).join('')}
