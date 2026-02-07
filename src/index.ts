@@ -2,10 +2,13 @@
 export { TauTongueInterpreter } from './tau-tongue/TauTongueInterpreter_v2.js';
 export type { 
   TauTongueResult, 
+  TauTongueAntagonist,
   BraidInterpretation, 
   InflectionPoint, 
-  RenderOptions 
+  RenderOptions,
+  NarrativePalette 
 } from './tau-tongue/TauTongueInterpreter_v2.js';
+export { SceneFunction } from './tau-tongue/TauTongueInterpreter_v2.js';
 
 // TauSpine exports
 export { TauSpine, createTauSpine, SpineFormat, getPath } from './tau-tongue/TauSpine.js';

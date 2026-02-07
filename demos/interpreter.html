@@ -114,6 +114,16 @@
       box-shadow: 0 4px 12px rgba(12, 166, 120, 0.4);
     }
 
+    .download-json-btn {
+      background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+      margin-top: 1rem;
+      display: none;
+    }
+
+    .download-json-btn:hover {
+      box-shadow: 0 4px 12px rgba(37, 99, 235, 0.4);
+    }
+
     .download-btn-container {
       padding: 0 2rem 1rem 2rem;
     }
@@ -345,12 +355,14 @@
 
     <div class="download-btn-container">
       <button class="download-btn" id="downloadBtnTop">📥 Download Markdown</button>
+      <button class="download-json-btn" id="downloadJsonBtnTop">📦 Download JSON</button>
     </div>
 
     <div class="output" id="output"></div>
 
     <div class="download-btn-container">
       <button class="download-btn" id="downloadBtnBottom">📥 Download Markdown</button>
+      <button class="download-json-btn" id="downloadJsonBtnBottom">📦 Download JSON</button>
     </div>
   </div>
 
@@ -507,11 +519,29 @@
       URL.revokeObjectURL(url);
     }
 
+    function downloadJSON(result) {
+      const json = JSON.stringify(result, null, 2);
+      const blob = new Blob([json], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `tau-tongue-${result.input.slice(0, 30).replace(/[^a-zA-Z0-9]/g, '-')}.json`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    }
+
     function renderResult(result) {
       // Show download buttons
       document.querySelectorAll('.download-btn').forEach(btn => {
         btn.style.display = 'block';
         btn.onclick = () => downloadMarkdown(result);
+      });
+
+      document.querySelectorAll('.download-json-btn').forEach(btn => {
+        btn.style.display = 'block';
+        btn.onclick = () => downloadJSON(result);
       });
 
       const html = `
