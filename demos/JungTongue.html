@@ -1,0 +1,724 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Jung-Tongue — Archetypal Chatbot</title>
+  <style>
+    /* ---- Reset ---- */
+    *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+    :root {
+      --bg:          #0a0a12;
+      --surface:     #13131f;
+      --border:      #252538;
+      --text:        #d4d4e0;
+      --muted:       #6e6e88;
+      --accent:      #a78bfa;
+      --accent-dim:  #7c5cbf;
+      --user-bg:     #1e1b34;
+      --system-bg:   #161625;
+      --danger:      #f87171;
+      --sidebar-w:   280px;
+      --input-h:     64px;
+    }
+
+    html, body { height: 100%; }
+
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      display: flex;
+      overflow: hidden;
+    }
+
+    /* ---- Sidebar ---- */
+    .sidebar {
+      width: var(--sidebar-w);
+      min-width: var(--sidebar-w);
+      background: var(--surface);
+      border-right: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      transition: margin-left .25s ease;
+    }
+    .sidebar.collapsed { margin-left: calc(var(--sidebar-w) * -1); }
+
+    .sidebar-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: .75rem 1rem;
+      border-bottom: 1px solid var(--border);
+    }
+    .sidebar-header h2 {
+      font-size: .85rem;
+      text-transform: uppercase;
+      letter-spacing: .08em;
+      color: var(--muted);
+    }
+
+    .btn-new {
+      background: var(--accent-dim);
+      color: #fff;
+      border: none;
+      border-radius: 6px;
+      padding: .35rem .7rem;
+      font-size: .8rem;
+      cursor: pointer;
+      transition: background .15s;
+    }
+    .btn-new:hover { background: var(--accent); }
+
+    .session-list {
+      flex: 1;
+      overflow-y: auto;
+      padding: .5rem;
+    }
+
+    .session-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: .6rem .75rem;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: .85rem;
+      color: var(--text);
+      transition: background .12s;
+      margin-bottom: 2px;
+    }
+    .session-item:hover { background: rgba(167,139,250,.08); }
+    .session-item.active { background: rgba(167,139,250,.15); }
+
+    .session-item .title {
+      flex: 1;
+      overflow: hidden;
+      white-space: nowrap;
+      text-overflow: ellipsis;
+    }
+
+    .session-item .delete {
+      opacity: 0;
+      background: none;
+      border: none;
+      color: var(--danger);
+      font-size: .95rem;
+      cursor: pointer;
+      padding: 0 .25rem;
+      transition: opacity .15s;
+    }
+    .session-item:hover .delete { opacity: .7; }
+    .session-item .delete:hover { opacity: 1; }
+
+    /* ---- Main chat area ---- */
+    .main {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      min-width: 0;
+    }
+
+    /* Top bar */
+    .topbar {
+      display: flex;
+      align-items: center;
+      gap: .75rem;
+      padding: .6rem 1rem;
+      border-bottom: 1px solid var(--border);
+      background: var(--surface);
+    }
+
+    .topbar .hamburger {
+      background: none;
+      border: none;
+      color: var(--text);
+      font-size: 1.3rem;
+      cursor: pointer;
+      padding: .15rem .35rem;
+      border-radius: 4px;
+      transition: background .12s;
+    }
+    .topbar .hamburger:hover { background: rgba(255,255,255,.06); }
+
+    .topbar h1 {
+      font-size: 1.05rem;
+      font-weight: 600;
+      background: linear-gradient(135deg, var(--accent), #818cf8);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    /* Messages */
+    .messages {
+      flex: 1;
+      overflow-y: auto;
+      padding: 1.5rem 1rem;
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+      max-width: 780px;
+      width: 100%;
+      margin: 0 auto;
+    }
+
+    .msg {
+      max-width: 72%;
+      padding: .85rem 1.1rem;
+      border-radius: 12px;
+      font-size: .92rem;
+      line-height: 1.55;
+      white-space: pre-wrap;
+      word-wrap: break-word;
+    }
+
+    .msg.user {
+      align-self: flex-end;
+      background: var(--user-bg);
+      border: 1px solid rgba(167,139,250,.18);
+      border-bottom-right-radius: 4px;
+    }
+
+    .msg.system {
+      align-self: flex-start;
+      background: var(--system-bg);
+      border: 1px solid var(--border);
+      border-bottom-left-radius: 4px;
+      color: #c4b5fd;
+    }
+
+    .msg .meta {
+      display: block;
+      font-size: .72rem;
+      color: var(--muted);
+      margin-top: .45rem;
+    }
+
+    .msg .equation {
+      display: block;
+      font-family: 'Courier New', monospace;
+      font-size: .82rem;
+      color: var(--accent);
+      margin-top: .35rem;
+      word-break: break-all;
+    }
+
+    /* Welcome splash */
+    .welcome {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      padding: 2rem;
+      color: var(--muted);
+    }
+    .welcome h2 {
+      font-size: 1.6rem;
+      margin-bottom: .5rem;
+      background: linear-gradient(135deg, var(--accent), #818cf8);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+    .welcome p { max-width: 420px; line-height: 1.6; font-size: .9rem; }
+
+    /* Input bar */
+    .input-bar {
+      display: flex;
+      align-items: flex-end;
+      gap: .5rem;
+      padding: .75rem 1rem;
+      border-top: 1px solid var(--border);
+      background: var(--surface);
+      max-width: 780px;
+      width: 100%;
+      margin: 0 auto;
+    }
+
+    .input-bar textarea {
+      flex: 1;
+      resize: none;
+      overflow-y: hidden;
+      min-height: 42px;
+      max-height: 160px;
+      padding: .6rem .9rem;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      color: var(--text);
+      font-size: .92rem;
+      font-family: inherit;
+      line-height: 1.45;
+      outline: none;
+      transition: border-color .15s;
+    }
+    .input-bar textarea:focus { border-color: var(--accent); }
+    .input-bar textarea::placeholder { color: var(--muted); }
+
+    .input-bar .send {
+      background: var(--accent-dim);
+      color: #fff;
+      border: none;
+      border-radius: 8px;
+      width: 42px;
+      height: 42px;
+      font-size: 1.1rem;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: background .15s;
+      flex-shrink: 0;
+    }
+    .input-bar .send:hover { background: var(--accent); }
+
+    .input-bar .mic {
+      background: none;
+      border: 1px solid var(--border);
+      color: var(--muted);
+      border-radius: 8px;
+      width: 42px;
+      height: 42px;
+      font-size: 1.1rem;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: color .15s, border-color .15s;
+      flex-shrink: 0;
+    }
+    .input-bar .mic:hover { color: var(--accent); border-color: var(--accent-dim); }
+    .input-bar .mic.recording {
+      color: var(--danger);
+      border-color: var(--danger);
+      animation: pulse-mic 1s ease infinite;
+    }
+    @keyframes pulse-mic {
+      0%, 100% { opacity: 1; }
+      50% { opacity: .5; }
+    }
+
+    /* Download button */
+    .topbar { justify-content: flex-start; }
+    .btn-download {
+      margin-left: auto;
+      background: none;
+      border: 1px solid var(--border);
+      color: var(--muted);
+      border-radius: 6px;
+      padding: .3rem .7rem;
+      font-size: .78rem;
+      cursor: pointer;
+      transition: color .15s, border-color .15s;
+    }
+    .btn-download:hover { color: var(--accent); border-color: var(--accent-dim); }
+
+    /* Archetype tooltip */
+    .archetype-hint {
+      position: relative;
+      color: var(--accent);
+      cursor: help;
+      border-bottom: 1px dotted var(--accent-dim);
+    }
+
+    /* Shared tooltip (positioned by JS) */
+    .archetype-tooltip {
+      position: fixed;
+      background: #1e1b34;
+      color: var(--text);
+      border: 1px solid var(--accent-dim);
+      border-radius: 8px;
+      padding: .55rem .8rem;
+      font-size: .78rem;
+      line-height: 1.5;
+      max-width: 300px;
+      pointer-events: none;
+      opacity: 0;
+      transition: opacity .18s ease;
+      z-index: 200;
+      box-shadow: 0 4px 16px rgba(0,0,0,.45);
+    }
+    .archetype-tooltip.visible { opacity: 1; }
+
+    /* Scrollbar */
+    ::-webkit-scrollbar { width: 6px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+  </style>
+</head>
+<body>
+
+  <!-- Sidebar -->
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-header">
+      <h2>Sessions</h2>
+      <button class="btn-new" id="btn-new-session">+ New</button>
+    </div>
+    <div class="session-list" id="session-list"></div>
+  </aside>
+
+  <!-- Main -->
+  <div class="main">
+    <div class="topbar">
+      <button class="hamburger" id="btn-hamburger" title="Toggle sidebar">&#9776;</button>
+      <h1>Jung-Tongue</h1>
+      <button class="btn-download" id="btn-download" title="Download session as text">&#8681; Export</button>
+    </div>
+
+    <div class="messages" id="messages">
+      <div class="welcome" id="welcome">
+        <h2>Jung-Tongue</h2>
+        <p>Type a thought, a word, a question — the archetypal engine will distill it into a symbolic crucible and respond with a Jungian reflection.</p>
+      </div>
+    </div>
+
+    <div class="input-bar">
+      <textarea id="user-input" rows="1"
+        placeholder="Speak your mind..."></textarea>
+      <button class="mic" id="btn-mic" title="Voice input">&#127908;</button>
+      <button class="send" id="btn-send" title="Send">&#10148;</button>
+    </div>
+  </div>
+
+  <!-- Shared tooltip element -->
+  <div class="archetype-tooltip" id="archetype-tooltip"></div>
+
+  <!-- Dexie for IndexedDB session persistence -->
+  <script src="https://unpkg.com/dexie@latest/dist/dexie.min.js"></script>
+
+  <script type="module">
+    import { TauTongueInterpreter } from '../dist/index.js';
+    import { JUNG_CONFIG } from './jung-tongue-config.js';
+
+    // ---- Interpreter ----
+    const interpreter = new TauTongueInterpreter(JUNG_CONFIG);
+
+    // ---- Dexie DB ----
+    const db = new Dexie('JungTongueDB');
+    db.version(1).stores({
+      sessions: '++id, updatedAt',
+    });
+
+    // ---- State ----
+    let activeSessionId = null;
+
+    // ---- DOM refs ----
+    const sidebar       = document.getElementById('sidebar');
+    const sessionListEl = document.getElementById('session-list');
+    const messagesEl    = document.getElementById('messages');
+    const welcomeEl     = document.getElementById('welcome');
+    const userInput     = document.getElementById('user-input');
+    const btnSend       = document.getElementById('btn-send');
+    const btnNew        = document.getElementById('btn-new-session');
+    const btnHamburger  = document.getElementById('btn-hamburger');
+    const btnDownload   = document.getElementById('btn-download');
+    const btnMic        = document.getElementById('btn-mic');
+
+    // ---- Helpers ----
+    function scrollToBottom() {
+      messagesEl.scrollTop = messagesEl.scrollHeight;
+    }
+
+    function truncate(str, len = 36) {
+      return str.length > len ? str.slice(0, len) + '…' : str;
+    }
+
+    function autoResize(el) {
+      el.style.height = 'auto';
+      el.style.height = Math.min(el.scrollHeight, 160) + 'px';
+    }
+
+    // ---- Render helpers ----
+    function renderMsg(role, text, extras = {}) {
+      const div = document.createElement('div');
+      div.classList.add('msg', role);
+      let html = text;
+      if (extras.meta) {
+        html += `<span class="meta">${extras.meta}</span>`;
+      }
+      div.innerHTML = html;
+      return div;
+    }
+
+    function clearMessages() {
+      messagesEl.innerHTML = '';
+    }
+
+    function showWelcome() {
+      clearMessages();
+      messagesEl.appendChild(welcomeEl);
+      welcomeEl.style.display = '';
+    }
+
+    function hideWelcome() {
+      if (welcomeEl.parentElement === messagesEl) {
+        welcomeEl.style.display = 'none';
+      }
+    }
+
+    // ---- Session list ----
+    async function refreshSessionList() {
+      const sessions = await db.sessions.orderBy('updatedAt').reverse().toArray();
+      sessionListEl.innerHTML = '';
+      for (const s of sessions) {
+        const item = document.createElement('div');
+        item.className = 'session-item' + (s.id === activeSessionId ? ' active' : '');
+        item.innerHTML = `
+          <span class="title">${truncate(s.title)}</span>
+          <button class="delete" data-id="${s.id}" title="Delete session">&times;</button>`;
+        item.addEventListener('click', (e) => {
+          if (e.target.classList.contains('delete')) return;
+          loadSession(s.id);
+        });
+        item.querySelector('.delete').addEventListener('click', async (e) => {
+          e.stopPropagation();
+          await db.sessions.delete(s.id);
+          if (activeSessionId === s.id) {
+            activeSessionId = null;
+            showWelcome();
+          }
+          refreshSessionList();
+        });
+        sessionListEl.appendChild(item);
+      }
+    }
+
+    async function loadSession(id) {
+      const session = await db.sessions.get(id);
+      if (!session) return;
+      activeSessionId = id;
+      clearMessages();
+      hideWelcome();
+      for (const m of session.messages) {
+        messagesEl.appendChild(renderMsg(m.role, m.text, m.extras || {}));
+      }
+      scrollToBottom();
+      refreshSessionList();
+    }
+
+    async function saveMessage(role, text, extras = {}) {
+      if (!activeSessionId) {
+        // Create new session — title is the first user message
+        const id = await db.sessions.add({
+          title: text,
+          createdAt: Date.now(),
+          updatedAt: Date.now(),
+          messages: [{ role, text, extras, ts: Date.now() }],
+        });
+        activeSessionId = id;
+      } else {
+        const session = await db.sessions.get(activeSessionId);
+        session.messages.push({ role, text, extras, ts: Date.now() });
+        session.updatedAt = Date.now();
+        await db.sessions.put(session);
+      }
+      refreshSessionList();
+    }
+
+    // ---- Crucible → system response ----
+    function buildSystemResponse(result) {
+      // Extract the crucible operator (first char of symbolicEquation)
+      const operatorChar = result.symbolicEquation.charAt(0);
+
+      // Look up its metaphorical meaning via the interpreter's symbol map
+      // We access it through the interpreter's public getSymbol if available,
+      // otherwise use the default symbol map.
+      const symbolDef = getSymbolDef(operatorChar);
+      const metaphor = symbolDef
+        ? symbolDef.metaphoricalMeaning
+        : 'an unknown force';
+
+      const archetype = result.archetype;
+      const archetypeDesc = result.archetypeDescription || '';
+      const hintAttr = archetypeDesc.replace(/"/g, '&quot;');
+
+      // Build the reflective prompt — archetype wrapped in a tooltip span
+      return `When you consider ${metaphor.toLowerCase()} acting upon <span class="archetype-hint" data-hint="${hintAttr}">${archetype}</span>…\n\nWhat comes to your mind?`;
+    }
+
+    // Access the symbol map — pull from the interpreter's internal map via
+    // the DEFAULT_SYMBOL_MAP (the config didn't override it).
+    let _symbolMap = null;
+    function getSymbolDef(char) {
+      if (!_symbolMap) {
+        // Import it once lazily
+        import('../dist/index.js').then(m => { _symbolMap = m.DEFAULT_SYMBOL_MAP; });
+        return null;
+      }
+      return _symbolMap[char] || null;
+    }
+
+    // Pre-load the symbol map eagerly
+    import('../dist/index.js').then(m => { _symbolMap = m.DEFAULT_SYMBOL_MAP; });
+
+    // ---- Send logic ----
+    async function send() {
+      const raw = userInput.value.trim();
+      if (!raw) return;
+
+      userInput.value = '';
+      autoResize(userInput);
+      hideWelcome();
+
+      // ---- User bubble ----
+      messagesEl.appendChild(renderMsg('user', raw));
+      await saveMessage('user', raw);
+      scrollToBottom();
+
+      // ---- Interpret ----
+      let result;
+      try {
+        result = interpreter.interpret(raw);
+      } catch (err) {
+        const errText = `Something went wrong: ${err.message}`;
+        messagesEl.appendChild(renderMsg('system', errText));
+        await saveMessage('system', errText);
+        scrollToBottom();
+        return;
+      }
+
+      // ---- System bubble (delayed for natural feel) ----
+      const delay = 500 + Math.random() * 1500;
+      await new Promise(r => setTimeout(r, delay));
+      const responseText = buildSystemResponse(result);
+      const hintAttr = (result.archetypeDescription || '').replace(/"/g, '&quot;');
+      const extras = {
+        meta: `${result.resonance} · <span class="archetype-hint" data-hint="${hintAttr}">${result.archetype}</span> · root ${result.digitalSum}`,
+      };
+
+      messagesEl.appendChild(renderMsg('system', responseText, extras));
+      await saveMessage('system', responseText, extras);
+      scrollToBottom();
+    }
+
+    // ---- Event wiring ----
+    btnSend.addEventListener('click', send);
+
+    userInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        send();
+      }
+    });
+
+    userInput.addEventListener('input', () => autoResize(userInput));
+
+    // ---- Voice input (Web Speech API) ----
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (SpeechRecognition) {
+      const recognition = new SpeechRecognition();
+      recognition.continuous = true;
+      recognition.interimResults = true;
+      recognition.lang = 'en-US';
+      let isRecording = false;
+
+      btnMic.addEventListener('click', () => {
+        if (isRecording) {
+          recognition.stop();
+          // Send whatever has been captured so far
+          if (userInput.value.trim()) send();
+          return;
+        }
+        recognition.start();
+      });
+
+      recognition.addEventListener('start', () => {
+        isRecording = true;
+        btnMic.classList.add('recording');
+      });
+
+      recognition.addEventListener('end', () => {
+        isRecording = false;
+        btnMic.classList.remove('recording');
+      });
+
+      recognition.addEventListener('result', (e) => {
+        const transcript = Array.from(e.results)
+          .map(r => r[0].transcript)
+          .join('');
+        userInput.value = transcript;
+        autoResize(userInput);
+      });
+
+      recognition.addEventListener('error', (e) => {
+        console.warn('Speech recognition error:', e.error);
+        isRecording = false;
+        btnMic.classList.remove('recording');
+      });
+    } else {
+      btnMic.style.display = 'none';
+    }
+
+    btnHamburger.addEventListener('click', () => {
+      sidebar.classList.toggle('collapsed');
+    });
+
+    btnNew.addEventListener('click', () => {
+      activeSessionId = null;
+      showWelcome();
+      refreshSessionList();
+      userInput.focus();
+    });
+
+    btnDownload.addEventListener('click', async () => {
+      if (!activeSessionId) return;
+      const session = await db.sessions.get(activeSessionId);
+      if (!session || !session.messages.length) return;
+
+      const lines = session.messages.map(m => {
+        const label = m.role === 'user' ? 'You' : 'Jung-Tongue';
+        // Strip HTML tags from text (archetype-hint spans etc.)
+        const plain = m.text.replace(/<[^>]*>/g, '');
+        return `${label}:\n${plain}`;
+      });
+
+      const blob = new Blob(
+        [`Jung-Tongue Session\n${'='.repeat(40)}\n\n${lines.join('\n\n')}\n`],
+        { type: 'text/plain' }
+      );
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = `jung-tongue-${new Date().toISOString().slice(0,10)}.txt`;
+      a.click();
+      URL.revokeObjectURL(a.href);
+    });
+
+    // ---- Archetype tooltip (JS-positioned) ----
+    const tooltip = document.getElementById('archetype-tooltip');
+    document.addEventListener('mouseover', (e) => {
+      const hint = e.target.closest('.archetype-hint');
+      if (!hint) return;
+      const text = hint.getAttribute('data-hint');
+      if (!text) return;
+      tooltip.textContent = text;
+      tooltip.classList.add('visible');
+      const rect = hint.getBoundingClientRect();
+      // Left-align to the hovered element
+      tooltip.style.left = '0';
+      tooltip.style.top = '';
+      const tw = tooltip.offsetWidth;
+      const th = tooltip.offsetHeight;
+      let left = rect.left;
+      // Keep it on-screen if it overflows right
+      if (left + tw > window.innerWidth - 8) left = window.innerWidth - tw - 8;
+      if (left < 8) left = 8;
+      let top = rect.top - th - 8;
+      if (top < 8) top = rect.bottom + 8;
+      tooltip.style.left = left + 'px';
+      tooltip.style.top = top + 'px';
+    });
+    document.addEventListener('mouseout', (e) => {
+      const hint = e.target.closest('.archetype-hint');
+      if (hint) tooltip.classList.remove('visible');
+    });
+
+    // ---- Init ----
+    if (window.innerWidth <= 640) sidebar.classList.add('collapsed');
+    refreshSessionList();
+    userInput.focus();
+  </script>
+</body>
+</html>

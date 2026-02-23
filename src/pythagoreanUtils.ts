@@ -41,7 +41,22 @@ export const convertToNumbers = (text: string): string => {
     .join("");
 };
 
-export const calculateDigitalRoot = (numStr: string): number | null => {
+/**
+ * Low-level Pythagorean numerology configuration.
+ * Derived automatically from {@link TauTongueConfig} — consumers
+ * should not need to construct this directly.
+ */
+export interface PythagoreanConfig {
+  /** Map of digital-root keys to archetype names. Keys that appear here are treated as valid reduction endpoints. */
+  archetypes: Record<number, string>;
+  /** Numbers that halt digital-root reduction (default: `[11, 22]`). */
+  typalNumbers?: number[];
+}
+
+/** Default typal (master) numbers in classical Pythagorean numerology. */
+export const DEFAULT_TYPAL_NUMBERS: number[] = [11, 22];
+
+export const calculateDigitalRoot = (numStr: string, config?: PythagoreanConfig): number | null => {
   // Filter out non-numeric characters and convert to array of numbers
   const numbers = numStr
     .split('')
@@ -50,21 +65,23 @@ export const calculateDigitalRoot = (numStr: string): number | null => {
 
   if (numbers.length === 0) return null;
 
+  const isValidRoot = (n: number): boolean => {
+    if (config) {
+      return config.archetypes[n] !== undefined ||
+             (config.typalNumbers ?? DEFAULT_TYPAL_NUMBERS).includes(n);
+    }
+    return n < 10 || n === 11 || n === 22; // backward compat default
+  };
+
   // Initial sum
   let sum = numbers.reduce((acc, curr) => acc + curr, 0);
 
-  // Preserve master numbers 11 and 22
-  if (sum === 11 || sum === 22) return sum;
-
-  // Keep reducing until we get a single digit
-  while (sum > 9) {
+  // Keep reducing until we get a valid root
+  while (!isValidRoot(sum)) {
     sum = String(sum)
       .split('')
       .map(Number)
       .reduce((acc, curr) => acc + curr, 0);
-
-    // Preserve if master number arises during reduction
-    if (sum === 11 || sum === 22) return sum;
   }
 
   return sum;
@@ -109,7 +126,7 @@ async function sha256Hash(input: string): Promise<string> {
 /**
  * Cipher cycling - evolve the numerical signature
  */
-export const cipherCycle = async (numeroCipher: string, resonance: number): Promise<string> => {
+export const cipherCycle = async (numeroCipher: string, resonance: number, config?: PythagoreanConfig): Promise<string> => {
 
   const digits = numeroCipher.split('').map(Number);
 
@@ -121,14 +138,24 @@ export const cipherCycle = async (numeroCipher: string, resonance: number): Prom
   
   for (let i = 0; i < digits.length; i++) {
     const digit = digits[i];
-    let newDigit = calculateDigitalRoot((BigIntHash / BigInt((digit + resonance + i) * resonance)).toString());
+    let newDigit = calculateDigitalRoot((BigIntHash / BigInt((digit + resonance + i) * resonance)).toString(), config);
     
     if (newDigit === null) {
       throw new Error(`Invalid digit encountered: ${digit}`);
     }
 
-    if (newDigit === 11) newDigit = 2; // Treat master number 11 as 2
-    if (newDigit === 22) newDigit = 4; // Treat master number 22 as 4
+    if (!config) {
+      if (newDigit === 11) newDigit = 2; // Treat master number 11 as 2
+      if (newDigit === 22) newDigit = 4; // Treat master number 22 as 4
+    } else {
+      const typal = config.typalNumbers ?? DEFAULT_TYPAL_NUMBERS;
+      if (typal.includes(newDigit) && config.archetypes[newDigit] === undefined) {
+        // collapse typal numbers to single-digit equivalents
+        while (newDigit > 9) {
+          newDigit = String(newDigit).split('').map(Number).reduce((a, b) => a + b, 0);
+        }
+      }
+    }
     
     evolved.push(newDigit);
   }
@@ -136,112 +163,7 @@ export const cipherCycle = async (numeroCipher: string, resonance: number): Prom
   return evolved.join('');
 }
 
-// export const calculatePythagoreanNumber = (input: string | number): number => {
-//   let numStr = String(input).match(/\d/g)?.join('') || ''; // only keep the digits
-//   // continually sum the digits until a single digit is reached
-//   while (numStr.length > 1) {
-//     // if not a master number, sum the digits
-//     if (numStr !== '11' && numStr !== '22' && numStr !== '33') {
-//       numStr = numStr.split('').reduce((acc, char) => acc + parseInt(char), 0).toString();
-//     }
-//   }
-//   return parseInt(numStr);
-// };
 
-// export const guessPythagoreanWord = (input: string | number): string => {
-//   // create a word by turning the input numbers into the corresponding letters
-//   const word = input.toString().split('').map(char => Object.keys(numerologyMap).find((key) => numerologyMap[key] === parseInt(char)) || char).join('');
-//   return word;
-// };
-
-// export const guessPythagoreanWord = (input: string | number, augment: number = 0): string => {
-//   const words = input.toString().split(" ");
-//   const guessedWords: string[] = [];
-//   words.forEach((word) => {
-//     const digitalRoot = calculateDigitalRoot(word);
-//     // for each letter in the word, get it's possible letters from the numerologyMap
-//     let wordGuess = "";
-//     word.split("").forEach((letter) => {
-//       if(letter === "0") {
-//         wordGuess += "0";
-//         return;
-//       }
-//       // get the key of the matches in the numerologyMap
-//       const matches = Object.keys(numerologyMap).filter((key) => numerologyMap[key] === parseInt(letter));
-//       if(digitalRoot) {
-//         // then, cycle through the matches, using the digitalRoot to select the correct letter
-//         const selectedLetter = matches[(digitalRoot + augment) % matches.length];
-//         wordGuess += selectedLetter;
-//       } else {
-//         wordGuess += letter;
-//       }
-//     });
-
-//     guessedWords.push(wordGuess);
-
-
-//   });
-//   return guessedWords.join(" ");
-// };
-
-// uses numerocipher to influence output selected characters
-export const guessPythagoreanWord = (input: string | number, augment: number = 0): string => {
-  const words = input.toString().split(" ");
-  const guessedWords: string[] = [];
-  
-  // Pre-calculate a distribution pattern from the entire input
-  const fullDigitSequence = input.toString().replace(/\s/g, '').split('').map(Number);
-  
-  words.forEach((word, wordIndex) => {
-    const digitalRoot = calculateDigitalRoot(word);
-    let wordGuess = "";
-    let globalLetterIndex = 0;
-    
-    // Calculate starting position in global sequence
-    for(let i = 0; i < wordIndex; i++) {
-      globalLetterIndex += words[i].length;
-    }
-    
-    word.split("").forEach((letter) => {
-      if(letter === "0") {
-        wordGuess += "0";
-        globalLetterIndex++;
-        return;
-      }
-      
-      const matches = Object.keys(numerologyMap).filter((key) => 
-        numerologyMap[key] === parseInt(letter)
-      );
-      
-      if(digitalRoot && matches.length > 0) {
-        // Use surrounding context for selection
-        const prevDigit = fullDigitSequence[globalLetterIndex - 1] || 0;
-        const nextDigit = fullDigitSequence[globalLetterIndex + 1] || 0;
-        const currentDigit = parseInt(letter);
-        
-        const contextualSeed = (
-          digitalRoot + 
-          augment +
-          prevDigit * 5 +
-          nextDigit * 7 +
-          currentDigit * 11 +
-          globalLetterIndex * 3
-        );
-        
-        const selectedLetter = matches[contextualSeed % matches.length];
-        wordGuess += selectedLetter;
-      } else {
-        wordGuess += letter;
-      }
-      
-      globalLetterIndex++;
-    });
-
-    guessedWords.push(wordGuess);
-  });
-  
-  return guessedWords.join(" ");
-};
 
 /**
  * Extract braid digits from a tau-tongue equation string.

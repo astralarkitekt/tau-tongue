@@ -1,0 +1,320 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Tau-Tongue Sigils</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: #0a0a0f;
+      color: #e0e0e0;
+      min-height: 100vh;
+      padding: 2rem;
+    }
+
+    .container {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 2rem;
+      max-width: 1600px;
+      margin: 0 auto;
+    }
+
+    @media (min-width: 900px) {
+      .container {
+        grid-template-columns: 1fr 1fr;
+        align-items: start;
+      }
+    }
+
+    .header {
+      margin-bottom: 2rem;
+    }
+
+    .header h1 {
+      font-size: 2.5rem;
+      background: linear-gradient(135deg, #c084fc, #818cf8, #38bdf8);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      margin-bottom: 0.5rem;
+    }
+
+    .header p {
+      color: #888;
+      font-size: 1.1rem;
+    }
+
+    .controls {
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+      margin-bottom: 2rem;
+    }
+
+    .controls textarea {
+      width: 100%;
+      min-height: 120px;
+      padding: 1rem;
+      background: #1a1a2e;
+      border: 1px solid #333;
+      border-radius: 8px;
+      color: #e0e0e0;
+      font-size: 1rem;
+      font-family: inherit;
+      outline: none;
+      resize: vertical;
+      transition: border-color 0.2s;
+    }
+
+    .controls textarea:focus {
+      border-color: #818cf8;
+    }
+
+    .sigil-stage {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      background: #111122;
+      border: 1px solid #222;
+      border-radius: 12px;
+      width: 100%;
+      aspect-ratio: 1 / 1;
+      overflow: hidden;
+    }
+
+    .sigil-stage canvas {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+    }
+
+    .equation-display {
+      padding: 1.5rem;
+      background: #1a1a2e;
+      border: 1px solid #333;
+      border-radius: 8px;
+      font-family: 'Courier New', monospace;
+      font-size: 0.95rem;
+      color: #c084fc;
+      word-break: break-all;
+      min-height: 3rem;
+      line-height: 1.5;
+    }
+    
+    .interpretation {
+      margin-top: 1.5rem;
+      padding: 1.5rem;
+      background: #1a1a2e;
+      border: 1px solid #333;
+      border-radius: 8px;
+      font-size: 0.95rem;
+      color: #a0a0b0;
+      line-height: 1.6;
+      white-space: pre-wrap;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="left-panel">
+      <div class="header">
+        <h1>Tau-Tongue Sigils</h1>
+        <p>Ethereal continuous line art from symbolic algebra</p>
+      </div>
+
+      <div class="controls">
+        <textarea id="spark-input" placeholder="Type a spark phrase to generate a sigil in real-time..."></textarea>
+      </div>
+
+      <div class="equation-display" id="equation-output">
+        Enter a spark to see its symbolic equation...
+      </div>
+      
+      <div class="interpretation" id="interpretation-output" style="display: none;">
+      </div>
+    </div>
+
+    <div class="right-panel">
+      <div class="sigil-stage">
+        <canvas id="sigil-canvas" width="2048" height="2048"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <!-- Include the bundled Tau-Tongue library -->
+  <script src="tau-tongue.bundle.js"></script>
+  <script>
+    const input = document.getElementById('spark-input');
+    const canvas = document.getElementById('sigil-canvas');
+    const ctx = canvas.getContext('2d');
+    const equationOutput = document.getElementById('equation-output');
+    const interpretationOutput = document.getElementById('interpretation-output');
+
+    // Initialize interpreter
+    const interpreter = new TauTongue.TauTongueInterpreter();
+
+    function drawSigil(result) {
+      // Clear canvas
+      ctx.fillStyle = '#111122';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+      const cx = canvas.width / 2;
+      const cy = canvas.height / 2;
+
+      const braid = result.braid;
+      const numSpokes = braid.length;
+      const angleStep = (Math.PI * 2) / numSpokes;
+
+      const level1Nodes = [];
+
+      // Calculate Level 1 nodes
+      braid.forEach((item, i) => {
+        const angle = i * angleStep - Math.PI / 2;
+        
+        const match = item.equation.match(/\((.*?)\)/);
+        const paramsStr = match ? match[1] : '';
+        const params = paramsStr.split(',').map(Number).filter(n => !isNaN(n));
+        
+        const paramSum = params.reduce((a, b) => a + b, 0);
+        const dr = TauTongue.calculateDigitalRoot(paramSum.toString()) || 1;
+
+        const spokeLength = 250 + dr * 20;
+        const nx = cx + Math.cos(angle) * spokeLength;
+        const ny = cy + Math.sin(angle) * spokeLength;
+        
+        const radius = 40 + dr * 3;
+
+        level1Nodes.push({ x: nx, y: ny, radius, params, angle, dr });
+      });
+
+      // Calculate Level 2 nodes
+      const allPoints = [];
+      
+      // Start at center
+      allPoints.push({ x: cx, y: cy });
+      
+      level1Nodes.forEach(node => {
+        const numParams = node.params.length;
+        
+        // Add Level 1 node
+        allPoints.push({ x: node.x, y: node.y });
+
+        if (numParams > 0) {
+          const spreadAngle = Math.PI * 1.2;
+          const startAngle = node.angle - spreadAngle / 2;
+          const paramAngleStep = numParams > 1 ? spreadAngle / (numParams - 1) : 0;
+
+          node.params.forEach((p, j) => {
+            const pAngle = numParams === 1 ? node.angle : startAngle + j * paramAngleStep;
+            
+            const pSpokeLength = node.radius + 40 + p * 15;
+            const px = node.x + Math.cos(pAngle) * pSpokeLength;
+            const py = node.y + Math.sin(pAngle) * pSpokeLength;
+
+            // Add Level 2 node
+            allPoints.push({ x: px, y: py });
+          });
+        }
+        
+        // Return to center after exhausting a braid's parameters
+        allPoints.push({ x: cx, y: cy });
+      });
+      
+      // Close the loop back to center (redundant but safe)
+      allPoints.push({ x: cx, y: cy });
+
+      // Draw the continuous glowing line
+      ctx.beginPath();
+      ctx.moveTo(allPoints[0].x, allPoints[0].y);
+      
+      for (let i = 1; i < allPoints.length; i++) {
+        ctx.lineTo(allPoints[i].x, allPoints[i].y);
+      }
+
+      // Glow effect settings
+      ctx.lineJoin = 'round';
+      ctx.lineCap = 'round';
+      
+      // Outer glow
+      ctx.lineWidth = 20;
+      ctx.strokeStyle = 'rgba(255, 215, 0, 0.1)'; // Faint gold
+      ctx.shadowBlur = 30;
+      ctx.shadowColor = '#ffaa00';
+      ctx.stroke();
+
+      // Middle glow
+      ctx.lineWidth = 10;
+      ctx.strokeStyle = 'rgba(255, 230, 100, 0.4)'; // Medium gold
+      ctx.shadowBlur = 15;
+      ctx.stroke();
+
+      // Inner core
+      ctx.lineWidth = 4;
+      ctx.strokeStyle = '#fff5cc'; // Bright pale gold
+      ctx.shadowBlur = 5;
+      ctx.stroke();
+      
+      // Reset shadow for nodes
+      ctx.shadowBlur = 0;
+
+      // Draw glowing dots at each point
+      const uniquePoints = new Set(allPoints.map(p => `${p.x},${p.y}`));
+      uniquePoints.forEach(pStr => {
+        const [x, y] = pStr.split(',').map(Number);
+        
+        ctx.beginPath();
+        ctx.arc(x, y, 8, 0, Math.PI * 2);
+        ctx.fillStyle = '#fff5cc';
+        ctx.shadowBlur = 15;
+        ctx.shadowColor = '#ffaa00';
+        ctx.fill();
+      });
+    }
+
+    function updateSigil() {
+      const spark = input.value.trim();
+      if (!spark) {
+        // Clear canvas and reset UI if empty
+        ctx.fillStyle = '#111122';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.fillStyle = '#334';
+        ctx.font = "40px 'Segoe UI'";
+        ctx.textAlign = 'center';
+        ctx.fillText("Awaiting Spark...", canvas.width/2, canvas.height/2);
+        
+        equationOutput.textContent = "Enter a spark to see its symbolic equation...";
+        interpretationOutput.style.display = 'none';
+        return;
+      }
+      
+      try {
+        const result = interpreter.interpret(spark);
+        
+        // Update UI
+        equationOutput.innerHTML = `<strong>Equation:</strong><br/>${result.symbolicEquation}<br/><br/><strong>Digital Sum:</strong> ${result.digitalSum} (${result.archetype})`;
+        
+        interpretationOutput.style.display = 'block';
+        interpretationOutput.textContent = result.narrativeInterpretation;
+
+        // Draw Sigil
+        drawSigil(result);
+      } catch (err) {
+        equationOutput.textContent = `Error: ${err.message}`;
+        console.error(err);
+      }
+    }
+
+    input.addEventListener('input', updateSigil);
+    
+    // Initial draw
+    updateSigil();
+  </script>
+</body>
+</html>

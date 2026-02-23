@@ -1,4 +1,5 @@
 // phonemicGenerator.ts
+import { calculateDigitalRoot } from './pythagoreanUtils.js';
 
 // Reverse mapping: number to possible letters
 const reverseNumerologyMap: { [key: number]: string[] } = {
@@ -11,16 +12,6 @@ const reverseNumerologyMap: { [key: number]: string[] } = {
   7: ['G', 'P', 'Y'],
   8: ['H', 'Q', 'Z'],
   9: ['I', 'R']
-};
-
-const calculateDigitalRoot = (input: string): number => {
-  const sum = input.split('').reduce((acc, char) => {
-    const num = parseInt(char);
-    return isNaN(num) ? acc : acc + num;
-  }, 0);
-  
-  if (sum === 11 || sum === 22) return sum;
-  return sum < 10 ? sum : calculateDigitalRoot(sum.toString());
 };
 
 const isVowel = (char: string): boolean => 'AEIOUYW'.includes(char.toUpperCase());
@@ -68,7 +59,7 @@ const selectCharacterBySyllable = (
 const generateSinglePhonemeticName = (numeroCipher: string, augment: number = 0): string => {
   if (!numeroCipher || numeroCipher.length === 0) return '';
   
-  const digitalRoot = calculateDigitalRoot(numeroCipher);
+  const digitalRoot = calculateDigitalRoot(numeroCipher) || 1;
   let result = '';
   
   for (let i = 0; i < numeroCipher.length; i++) {

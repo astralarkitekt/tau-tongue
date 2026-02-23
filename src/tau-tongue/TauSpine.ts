@@ -1,6 +1,5 @@
-import { TauTongueInterpreter, type TauTongueResult } from './TauTongueInterpreter_v2.js';
+import { TauTongueInterpreter, type TauTongueConfig, type TauTongueResult } from './TauTongueInterpreter_v2.js';
 import { calculateDigitalRoot, cipherCycle as pythagoreanCipherCycle, convertToNumbers } from '../pythagoreanUtils.js';
-import { getSymbol } from './TauTongueSymbolMap.js';
 import archetypeFictionTypeMap from './archetype-fiction-type-map.json' with { type: 'json' };
 import storyUnitSpecs from './story-unit-specs.json' with { type: 'json' };
 
@@ -113,9 +112,10 @@ export class TauSpine extends TauTongueInterpreter {
   
   constructor(
     private spark: string,
-    private format: SpineFormat
+    private format: SpineFormat,
+    config: TauTongueConfig = {}
   ) {
-    super();
+    super(config);
     this.validateInputs();
     this.formatData = this.getFormatData(this.format);
   }
@@ -307,7 +307,7 @@ export class TauSpine extends TauTongueInterpreter {
     const unitCount = this.calculateChildUnitCount(unitSpec, parentSpark, formatData);
     if (unitCount <= 0) return [];
     
-    let currentSpark = await this.cipherCycle(this.extractNumeroCipher(parentSpark).join(''), calculateDigitalRoot(this.extractNumeroCipher(parentSpark).join(''))!);
+    let currentSpark = await this.cipherCycle(this.extractNumeroCipher(parentSpark).join(''), calculateDigitalRoot(this.extractNumeroCipher(parentSpark).join(''), this.pythagoreanConfig)!);
     const nodes: TauSpineNode[] = [];
     
     for (let i = 0; i < unitCount; i++) {
@@ -315,7 +315,7 @@ export class TauSpine extends TauTongueInterpreter {
       const nodeSpark = await this.evolveSparkForNode(currentSpark, i, depth);
       const unitEquation = this.generateUnitEquation(nodeSpark);
       const numeroCipher = this.extractNumeroCipher(nodeSpark);
-      const resonance = calculateDigitalRoot(numeroCipher.join(''))!;
+      const resonance = calculateDigitalRoot(numeroCipher.join(''), this.pythagoreanConfig)!;
       
       // Create the node
       const node: TauSpineNode = {
@@ -411,7 +411,7 @@ export class TauSpine extends TauTongueInterpreter {
     // Use cipherCycle and add index/depth for more entropy
     const base = baseSpark + String(index) + String(depth);
     const numeroCipher = this.extractNumeroCipher(base);
-    const resonance = calculateDigitalRoot(numeroCipher.join(''))!;
+    const resonance = calculateDigitalRoot(numeroCipher.join(''), this.pythagoreanConfig)!;
     return await this.cipherCycle(numeroCipher.join(''), resonance);
   }
   
@@ -437,7 +437,7 @@ export class TauSpine extends TauTongueInterpreter {
    * Cipher cycling - evolve the numerical signature
    */
   private async cipherCycle(numeroCipher: string, resonance: number): Promise<string> {
-    return await pythagoreanCipherCycle(numeroCipher, resonance);
+    return await pythagoreanCipherCycle(numeroCipher, resonance, this.pythagoreanConfig);
   }
   
   /**
@@ -494,8 +494,8 @@ export class TauSpine extends TauTongueInterpreter {
     * Extract archetypal distribution matrix from symbolic equation
     */
    private extractArchetypalMatrix(equation: string): ArchetypalMatrix {
-     // Initialize braid-level digital roots with 0 count (1-9 only, no 11/22 at braid level)
-     const allRoots = [1, 2, 3, 4, 5, 6, 7, 8, 9, 11, 22];
+     // Initialize braid-level digital roots from config
+     const allRoots = Object.keys(this.archetypeMap).map(Number);
      const rootGroups: Map<number, { symbols: Set<string>, names: Set<string>, count: number }> = new Map();
      
      // Initialize all roots with empty data
@@ -525,15 +525,15 @@ export class TauSpine extends TauTongueInterpreter {
 
      // Find symbols that resonate with each digital root
      const symbolsInEquation = Array.from(equation).filter(char => {
-       const symbolData = getSymbol(char);
-       return symbolData !== null;
+       const symbolData = this.getSymbol(char);
+       return symbolData !== undefined;
      });
      
      symbolsInEquation.forEach(symbol => {
-       const symbolData = getSymbol(symbol);
+       const symbolData = this.getSymbol(symbol);
        if (symbolData) {
          const symbolBraid = symbol.charCodeAt(0).toString();
-         const symbolDigitalRoot = calculateDigitalRoot(symbolBraid);
+         const symbolDigitalRoot = calculateDigitalRoot(symbolBraid, this.pythagoreanConfig);
          if(symbolDigitalRoot === null) {
            console.error("Symbol digital root is null");
            throw new Error("Symbol digital root is null");
@@ -555,7 +555,7 @@ export class TauSpine extends TauTongueInterpreter {
          count: group.count,
          symbols: Array.from(group.symbols),
          symbolNames: Array.from(group.names),
-         resonance: this.getResonanceName(digitalRoot)
+         resonance: this.getSymbolicMeaning(digitalRoot)
        };
      });
 
@@ -578,11 +578,11 @@ export class TauSpine extends TauTongueInterpreter {
    }
 
    /**
-    * Extract master archetypal matrix from symbolic equation (includes 11/22)
+    * Extract master archetypal matrix from symbolic equation (includes typal numbers)
     */
    public extractMasterArchetypalMatrix(equation: string): ArchetypalMatrix {
-     // Initialize braid-level digital roots with 0 count (1-9 only, no 11/22 in any distribution)
-     const allRoots = [1, 2, 3, 4, 5, 6, 7, 8, 9, 11, 22];
+     // Initialize braid-level digital roots from config
+     const allRoots = Object.keys(this.archetypeMap).map(Number);
      const rootGroups: Map<number, { symbols: Set<string>, names: Set<string>, count: number }> = new Map();
      
      // Initialize all roots with empty data
@@ -612,15 +612,15 @@ export class TauSpine extends TauTongueInterpreter {
 
      // Find symbols that resonate with each digital root
      const symbolsInEquation = Array.from(equation).filter(char => {
-       const symbolData = getSymbol(char);
-       return symbolData !== null;
+       const symbolData = this.getSymbol(char);
+       return symbolData !== undefined;
      });
      
      symbolsInEquation.forEach(symbol => {
-       const symbolData = getSymbol(symbol);
+       const symbolData = this.getSymbol(symbol);
        if (symbolData) {
          const symbolBraid = symbol.charCodeAt(0).toString();
-         const symbolDigitalRoot = calculateDigitalRoot(symbolBraid);
+         const symbolDigitalRoot = calculateDigitalRoot(symbolBraid, this.pythagoreanConfig);
          if(symbolDigitalRoot === null) {
            console.error("Symbol digital root is null");
            throw new Error("Symbol digital root is null");
@@ -641,7 +641,7 @@ export class TauSpine extends TauTongueInterpreter {
          count: group.count,
          symbols: Array.from(group.symbols),
          symbolNames: Array.from(group.names),
-         resonance: this.getResonanceName(digitalRoot)
+         resonance: this.getSymbolicMeaning(digitalRoot)
        };
      });
 
@@ -663,26 +663,6 @@ export class TauSpine extends TauTongueInterpreter {
      };
    }
 
-   /**
-    * Get resonance name for digital root
-    */
-   private getResonanceName(digitalRoot: number): string {
-     const resonanceMap: Record<number, string> = {
-       1: 'SOURCE',
-       2: 'DUALITY', 
-       3: 'CREATION',
-       4: 'STRUCTURE',
-       5: 'CHANGE',
-       6: 'HARMONY',
-       7: 'MYSTERY',
-       8: 'POWER',
-       9: 'FULFILLMENT',
-       11: 'VISION',
-       22: 'MASTERWORK'
-     };
-     return resonanceMap[digitalRoot] || 'UNKNOWN';
-   }
-  
   /**
    * Utility: capitalize first letter
    */
@@ -692,8 +672,8 @@ export class TauSpine extends TauTongueInterpreter {
 }
 
 // Export convenience function
-export async function createTauSpine(spark: string, format: SpineFormat, lazyChildren: boolean = false): Promise<TauSpineResult> {
-  const spine = new TauSpine(spark, format);
+export async function createTauSpine(spark: string, format: SpineFormat, config: TauTongueConfig = {}, lazyChildren: boolean = false): Promise<TauSpineResult> {
+  const spine = new TauSpine(spark, format, config);
   return await spine.generate(lazyChildren);
 }
 

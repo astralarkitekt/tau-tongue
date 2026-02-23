@@ -1,0 +1,408 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Tau-Tongue Alchemy</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: #08080a;
+      color: #e0e0e0;
+      min-height: 100vh;
+      padding: 2rem;
+    }
+
+    .container {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 2rem;
+      max-width: 1600px;
+      margin: 0 auto;
+    }
+
+    @media (min-width: 900px) {
+      .container {
+        grid-template-columns: 1fr 1fr;
+        align-items: start;
+      }
+    }
+
+    .header {
+      margin-bottom: 2rem;
+    }
+
+    .header h1 {
+      font-size: 2.5rem;
+      background: linear-gradient(135deg, #10b981, #34d399, #059669);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      margin-bottom: 0.5rem;
+    }
+
+    .header p {
+      color: #888;
+      font-size: 1.1rem;
+    }
+
+    .controls {
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+      margin-bottom: 2rem;
+    }
+
+    .controls textarea {
+      width: 100%;
+      min-height: 120px;
+      padding: 1rem;
+      background: #1a1a2e;
+      border: 1px solid #333;
+      border-radius: 8px;
+      color: #e0e0e0;
+      font-size: 1rem;
+      font-family: inherit;
+      outline: none;
+      resize: vertical;
+      transition: border-color 0.2s;
+    }
+
+    .controls textarea:focus {
+      border-color: #10b981;
+    }
+
+    .sigil-stage {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      background: #08080a;
+      border: 1px solid #222;
+      border-radius: 12px;
+      width: 100%;
+      aspect-ratio: 1 / 1;
+      overflow: hidden;
+      box-shadow: inset 0 0 100px rgba(0,0,0,0.9);
+    }
+
+    .sigil-stage canvas {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+    }
+
+    .equation-display {
+      padding: 1.5rem;
+      background: #1a1a2e;
+      border: 1px solid #333;
+      border-radius: 8px;
+      font-family: 'Courier New', monospace;
+      font-size: 0.95rem;
+      color: #10b981;
+      word-break: break-all;
+      min-height: 3rem;
+      line-height: 1.5;
+    }
+    
+    .interpretation {
+      margin-top: 1.5rem;
+      padding: 1.5rem;
+      background: #1a1a2e;
+      border: 1px solid #333;
+      border-radius: 8px;
+      font-size: 0.95rem;
+      color: #a0a0b0;
+      line-height: 1.6;
+      white-space: pre-wrap;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="left-panel">
+      <div class="header">
+        <h1>Tau-Tongue Alchemy</h1>
+        <p>Sacred geometry and esoteric transmutation circles</p>
+      </div>
+
+      <div class="controls">
+        <textarea id="spark-input" placeholder="Type a spark phrase to forge the seal..."></textarea>
+      </div>
+
+      <div class="equation-display" id="equation-output">
+        Enter a spark to see its symbolic equation...
+      </div>
+      
+      <div class="interpretation" id="interpretation-output" style="display: none;">
+      </div>
+    </div>
+
+    <div class="right-panel">
+      <div class="sigil-stage">
+        <canvas id="sigil-canvas" width="2048" height="2048"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <!-- Include the bundled Tau-Tongue library -->
+  <script src="tau-tongue.bundle.js"></script>
+  
+  <script>
+    const input = document.getElementById('spark-input');
+    const canvas = document.getElementById('sigil-canvas');
+    const ctx = canvas.getContext('2d');
+    const equationOutput = document.getElementById('equation-output');
+    const interpretationOutput = document.getElementById('interpretation-output');
+
+    // Initialize interpreter
+    const interpreter = new TauTongue.TauTongueInterpreter();
+
+    const colors = {
+      1: '#ef4444', // Red
+      2: '#f97316', // Orange
+      3: '#eab308', // Yellow
+      4: '#22c55e', // Green
+      5: '#3b82f6', // Blue
+      6: '#6366f1', // Indigo
+      7: '#a855f7', // Violet
+      8: '#ec4899', // Pink
+      9: '#ca8a04', // Gold
+      11: '#06b6d4', // Cyan
+      22: '#f8fafc'  // White
+    };
+
+    function drawTextAlongArc(ctx, str, cx, cy, radius, angle) {
+      ctx.save();
+      ctx.translate(cx, cy);
+      ctx.rotate(angle);
+      
+      for (let i = 0; i < str.length; i++) {
+        ctx.save();
+        // Rotate to the correct angle for this character
+        ctx.rotate(i * (Math.PI * 2 / str.length));
+        // Move out to the radius
+        ctx.translate(0, -radius);
+        // Draw the character
+        ctx.fillText(str[i], 0, 0);
+        ctx.restore();
+      }
+      ctx.restore();
+    }
+
+    function drawAlchemySeal(result) {
+      // Clear canvas
+      ctx.globalCompositeOperation = 'source-over'; // Reset blend mode before clearing
+      ctx.fillStyle = '#08080a';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+      const cx = canvas.width / 2;
+      const cy = canvas.height / 2;
+      
+      const baseColor = colors[result.digitalSum] || '#888';
+      const eq = result.symbolicEquation;
+      const braid = result.braid;
+      const numVertices = braid.length;
+
+      // High-quality rendering settings
+      ctx.lineCap = 'round';
+      ctx.lineJoin = 'round';
+      ctx.globalCompositeOperation = 'screen';
+
+      // --- 1. The Outer Rings & Text ---
+      const outerRadius = 850;
+      const innerRadius = 780;
+      
+      ctx.beginPath();
+      ctx.arc(cx, cy, outerRadius, 0, Math.PI * 2);
+      ctx.arc(cx, cy, innerRadius, 0, Math.PI * 2);
+      ctx.lineWidth = 4;
+      ctx.strokeStyle = baseColor;
+      ctx.stroke();
+
+      // Draw the equation text in a circle
+      ctx.font = "bold 24px 'Courier New', monospace";
+      ctx.fillStyle = baseColor;
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      
+      // Repeat the equation if it's too short to fill the circle nicely
+      let textToDraw = eq;
+      while (textToDraw.length < 150) {
+        textToDraw += " • " + eq;
+      }
+      // Cap the text length to prevent overlapping characters on the ring
+      if (textToDraw.length > 180) {
+        textToDraw = textToDraw.substring(0, 177) + "...";
+      }
+      
+      drawTextAlongArc(ctx, textToDraw, cx, cy, (outerRadius + innerRadius) / 2, 0);
+
+      // --- 2. The Base Geometry (The Polygon) ---
+      // Cap the number of vertices to prevent the geometry from becoming a solid circle
+      const maxVertices = 12; // Dodecagram is complex enough for alchemy
+      const displayVertices = Math.min(Math.max(numVertices, 3), maxVertices);
+
+      const polyRadius = 650;
+      const vertices = [];
+      
+      // Calculate vertices
+      for (let i = 0; i < displayVertices; i++) {
+        const angle = (i / displayVertices) * Math.PI * 2 - Math.PI / 2;
+        vertices.push({
+          x: cx + Math.cos(angle) * polyRadius,
+          y: cy + Math.sin(angle) * polyRadius,
+          angle: angle
+        });
+      }
+
+      // Draw the primary polygon
+      ctx.beginPath();
+      ctx.moveTo(vertices[0].x, vertices[0].y);
+      for (let i = 1; i < displayVertices; i++) {
+        ctx.lineTo(vertices[i].x, vertices[i].y);
+      }
+      ctx.closePath();
+      ctx.lineWidth = 6;
+      ctx.strokeStyle = `rgba(255, 255, 255, 0.4)`;
+      ctx.stroke();
+
+      // --- 3. The Internal Web (The Parameters) ---
+      // Calculate dynamic alpha based on complexity to prevent white-out
+      let totalLines = 0;
+      braid.forEach(item => {
+        const match = item.equation.match(/\((.*?)\)/);
+        if (match) totalLines += match[1].split(',').length;
+      });
+      // As lines increase, opacity decreases
+      const dynamicAlpha = Math.max(0.03, 4.0 / Math.max(totalLines, 1));
+
+      // This creates the complex string-art inside the polygon
+      braid.forEach((item, i) => {
+        const match = item.equation.match(/\((.*?)\)/);
+        const paramsStr = match ? match[1] : '';
+        const params = paramsStr.split(',').map(Number).filter(n => !isNaN(n));
+        
+        // Wrap around the capped vertices
+        const startVertex = vertices[i % displayVertices];
+
+        params.forEach(p => {
+          // The parameter value dictates which vertex to connect to
+          const targetIndex = (i + p) % displayVertices;
+          const targetVertex = vertices[targetIndex];
+          
+          const pColor = colors[p] || '#aaa';
+
+          ctx.beginPath();
+          ctx.moveTo(startVertex.x, startVertex.y);
+          ctx.lineTo(targetVertex.x, targetVertex.y);
+          
+          // Thin, glowing lines for the web
+          ctx.lineWidth = 1.5;
+          ctx.strokeStyle = pColor;
+          ctx.globalAlpha = dynamicAlpha;
+          ctx.stroke();
+        });
+      });
+      ctx.globalAlpha = 1.0; // Reset
+
+      // --- 4. The Nodes (The Braid Operators) ---
+      // Only draw nodes for the actual vertices to prevent overlapping blobs
+      for (let i = 0; i < displayVertices; i++) {
+        const v = vertices[i];
+        // Use the rune from the corresponding braid item, or a default
+        const rune = (braid[i] && braid[i].equation) ? braid[i].equation.charAt(0) : '•';
+        
+        // Dynamic node size based on how many vertices we have
+        const nodeRadius = Math.min(45, (polyRadius * Math.PI) / displayVertices * 0.35);
+
+        // Draw node circle
+        ctx.beginPath();
+        ctx.arc(v.x, v.y, nodeRadius, 0, Math.PI * 2);
+        ctx.fillStyle = '#08080a';
+        ctx.fill();
+        ctx.lineWidth = 4;
+        ctx.strokeStyle = baseColor;
+        ctx.stroke();
+
+        // Draw rune
+        ctx.fillStyle = '#fff';
+        ctx.font = `bold ${nodeRadius * 0.9}px 'Segoe UI', sans-serif`;
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        ctx.fillText(rune, v.x, v.y + (nodeRadius * 0.05));
+      }
+
+      // --- 5. The Core (The Proto-Crucible) ---
+      const coreRune = eq.charAt(0);
+      const coreRadius = 120;
+
+      // Core outer rings
+      ctx.beginPath();
+      ctx.arc(cx, cy, coreRadius + 20, 0, Math.PI * 2);
+      ctx.lineWidth = 2;
+      ctx.strokeStyle = `rgba(255, 255, 255, 0.3)`;
+      ctx.stroke();
+
+      ctx.beginPath();
+      ctx.arc(cx, cy, coreRadius, 0, Math.PI * 2);
+      ctx.fillStyle = '#08080a';
+      ctx.fill();
+      ctx.lineWidth = 8;
+      ctx.strokeStyle = baseColor;
+      ctx.stroke();
+
+      // Core rune
+      ctx.fillStyle = baseColor;
+      ctx.font = "bold 100px 'Segoe UI', sans-serif";
+      ctx.shadowBlur = 30;
+      ctx.shadowColor = baseColor;
+      ctx.fillText(coreRune, cx, cy);
+      ctx.shadowBlur = 0; // Reset
+    }
+
+    function updateAlchemy() {
+      const spark = input.value.trim();
+      if (!spark) {
+        // Clear canvas and reset UI if empty
+        ctx.globalCompositeOperation = 'source-over'; // Reset blend mode before clearing
+        ctx.fillStyle = '#08080a';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.fillStyle = '#334';
+        ctx.font = "40px 'Segoe UI'";
+        ctx.textAlign = 'center';
+        ctx.fillText("Awaiting Spark...", canvas.width/2, canvas.height/2);
+        
+        equationOutput.textContent = "Enter a spark to forge the seal...";
+        interpretationOutput.style.display = 'none';
+        return;
+      }
+      
+      try {
+        const result = interpreter.interpret(spark);
+        
+        // Update UI
+        equationOutput.innerHTML = `<strong>Equation:</strong><br/>${result.symbolicEquation}<br/><br/><strong>Digital Sum:</strong> ${result.digitalSum} (${result.archetype})`;
+        
+        interpretationOutput.style.display = 'block';
+        interpretationOutput.textContent = result.narrativeInterpretation;
+
+        // Draw Seal
+        drawAlchemySeal(result);
+      } catch (err) {
+        equationOutput.textContent = `Error: ${err.message}`;
+        console.error(err);
+      }
+    }
+
+    input.addEventListener('input', updateAlchemy);
+    
+    // Initial draw
+    updateAlchemy();
+  </script>
+</body>
+</html>

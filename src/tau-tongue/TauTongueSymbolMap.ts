@@ -1,4 +1,19 @@
-export const tauTongue = {
+/**
+ * A single symbolic operator definition in the equation algebra.
+ * Each symbol carries a mathematical meaning and a metaphorical meaning
+ * used by the narrative interpretation layer.
+ */
+export interface SymbolDefinition {
+  /** Display name of the operator (e.g. "Partial Derivative") */
+  name: string;
+  /** Formal mathematical meaning */
+  mathMeaning: string;
+  /** Metaphorical / narrative meaning used in interpretation */
+  metaphoricalMeaning: string;
+}
+
+/** The default 256-symbol operator algebra used by BraidCraft. */
+export const DEFAULT_SYMBOL_MAP: Record<string, SymbolDefinition> = {
   "•": {
     name: "Dot Operator",
     mathMeaning: "Null operation or placeholder",
@@ -1281,10 +1296,12 @@ export const tauTongue = {
   },
 };
 
-export const getSymbols = () => {
-  return Object.keys(tauTongue);
+/** @deprecated Use instance method on TauTongueInterpreter instead */
+export const getSymbols = (): string[] => {
+  return Object.keys(DEFAULT_SYMBOL_MAP);
 };
 
-export const getSymbol = (symbol: string) => {
-  return tauTongue[symbol as keyof typeof tauTongue];
+/** @deprecated Use instance method on TauTongueInterpreter instead */
+export const getSymbol = (symbol: string): SymbolDefinition | undefined => {
+  return DEFAULT_SYMBOL_MAP[symbol];
 };

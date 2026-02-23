@@ -1,0 +1,404 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Tau-Tongue Aether — Norse Runic System</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: #050508;
+      color: #e0e0e0;
+      min-height: 100vh;
+      padding: 2rem;
+    }
+
+    .container {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 2rem;
+      max-width: 1600px;
+      margin: 0 auto;
+    }
+
+    @media (min-width: 900px) {
+      .container {
+        grid-template-columns: 1fr 1fr;
+        align-items: start;
+      }
+    }
+
+    .header {
+      margin-bottom: 2rem;
+    }
+
+    .header h1 {
+      font-size: 2.5rem;
+      background: linear-gradient(135deg, #c084fc, #818cf8, #38bdf8);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      margin-bottom: 0.5rem;
+    }
+
+    .header p {
+      color: #888;
+      font-size: 1.1rem;
+    }
+
+    .controls {
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+      margin-bottom: 2rem;
+    }
+
+    .controls textarea {
+      width: 100%;
+      min-height: 120px;
+      padding: 1rem;
+      background: #1a1a2e;
+      border: 1px solid #333;
+      border-radius: 8px;
+      color: #e0e0e0;
+      font-size: 1rem;
+      font-family: inherit;
+      outline: none;
+      resize: vertical;
+      transition: border-color 0.2s;
+    }
+
+    .controls textarea:focus {
+      border-color: #818cf8;
+    }
+
+    .sigil-stage {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      background: #050508;
+      border: 1px solid #222;
+      border-radius: 12px;
+      width: 100%;
+      aspect-ratio: 1 / 1;
+      overflow: hidden;
+      box-shadow: inset 0 0 100px rgba(0,0,0,0.8);
+    }
+
+    .sigil-stage canvas {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+    }
+
+    .equation-display {
+      padding: 1.5rem;
+      background: #1a1a2e;
+      border: 1px solid #333;
+      border-radius: 8px;
+      font-family: 'Courier New', monospace;
+      font-size: 0.95rem;
+      color: #c084fc;
+      word-break: break-all;
+      min-height: 3rem;
+      line-height: 1.5;
+    }
+    
+    .interpretation {
+      margin-top: 1.5rem;
+      padding: 1.5rem;
+      background: #1a1a2e;
+      border: 1px solid #333;
+      border-radius: 8px;
+      font-size: 0.95rem;
+      color: #a0a0b0;
+      line-height: 1.6;
+      white-space: pre-wrap;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="left-panel">
+      <div class="header">
+        <h1>Tau-Tongue Aether</h1>
+        <p>Runic energy fields — Norse cosmology via TauTongueConfig</p>
+      </div>
+
+      <div class="controls">
+        <textarea id="spark-input" maxlength="512" placeholder="Type a spark phrase to manifest the aether (max 512 chars)..."></textarea>
+      </div>
+
+      <div class="equation-display" id="equation-output">
+        Enter a spark to see its symbolic equation...
+      </div>
+      
+      <div class="interpretation" id="interpretation-output" style="display: none;">
+      </div>
+    </div>
+
+    <div class="right-panel">
+      <div class="sigil-stage">
+        <canvas id="sigil-canvas" width="2048" height="2048"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <!-- Include Simplex Noise for organic fluid generation -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/simplex-noise/2.4.0/simplex-noise.min.js"></script>
+
+  <script type="module">
+    import {
+      TauTongueInterpreter,
+      calculateDigitalRoot,
+      SceneFunction,
+    } from '../dist/index.js';
+
+    // ---- v3.5: Norse Runic Symbolic System ----
+    // 9 worlds of Yggdrasil as archetypes, runic resonances,
+    // typal numbers [3, 24] (3 roots of Yggdrasil, 24 Elder Futhark runes)
+    const NORSE_CONFIG = {
+      archetypeMap: {
+        1: 'Midgard',
+        2: 'Asgard',
+        3: 'Vanaheim',
+        4: 'Alfheim',
+        5: 'Svartalfheim',
+        6: 'Niflheim',
+        7: 'Muspelheim',
+        8: 'Helheim',
+        9: 'Jotunheim',
+        24: 'Yggdrasil',
+      },
+      archetypeDescriptions: {
+        'Midgard': 'The middle realm — humanity\'s home; the known world and mortal experience.',
+        'Asgard': 'Realm of the Aesir — divine order, sovereignty, and warrior wisdom.',
+        'Vanaheim': 'Realm of the Vanir — fertility, nature magic, and prophetic sight.',
+        'Alfheim': 'Realm of the light elves — beauty, inspiration, and ethereal craft.',
+        'Svartalfheim': 'Realm of the dwarves — deep craft, forging, and hidden treasure.',
+        'Niflheim': 'Primordial ice — stillness, entropy, and the void before creation.',
+        'Muspelheim': 'Primordial fire — raw power, destruction, and the spark of creation.',
+        'Helheim': 'Realm of the dead — shadow, memory, and the price of knowledge.',
+        'Jotunheim': 'Realm of the giants — chaos, untamed nature, and primal force.',
+        'Yggdrasil': 'The World Tree — the axis binding all nine realms; total integration.',
+      },
+      resonanceMap: {
+        1: 'FEHU',
+        2: 'URUZ',
+        3: 'THURISAZ',
+        4: 'ANSUZ',
+        5: 'RAIDHO',
+        6: 'KENAZ',
+        7: 'GEBO',
+        8: 'WUNJO',
+        9: 'HAGALAZ',
+        24: 'OTHALA',
+      },
+      resonanceDescriptions: {
+        'FEHU': 'Wealth and potential; the cattle-rune of primal resources.',
+        'URUZ': 'Strength and vitality; the aurochs-force of untamed power.',
+        'THURISAZ': 'Thorn and threshold; the giant-rune of challenge and protection.',
+        'ANSUZ': 'Breath and speech; Odin\'s rune of divine communication.',
+        'RAIDHO': 'Journey and rhythm; the rune of rightful motion and cosmic order.',
+        'KENAZ': 'Torch and craft; the fire of controlled knowledge and skill.',
+        'GEBO': 'Gift and exchange; the rune of sacred reciprocity and balance.',
+        'WUNJO': 'Joy and harmony; the rune of fellowship and perfected will.',
+        'HAGALAZ': 'Hail and disruption; the seed-rune of necessary destruction.',
+        'OTHALA': 'Ancestral homeland; the rune of heritage and total belonging.',
+      },
+      archetypeFunctionMap: {
+        1: SceneFunction.EXPOSITION,
+        2: SceneFunction.ACTION,
+        3: SceneFunction.REFLECTION,
+        4: SceneFunction.DIALOGUE,
+        5: SceneFunction.ACTION,
+        6: SceneFunction.FLASHBACK,
+        7: SceneFunction.CALLBACK,
+        8: SceneFunction.TRANSITION,
+        9: SceneFunction.ACTION,
+        24: SceneFunction.EXPOSITION,
+      },
+      typalNumbers: [3, 24],
+    };
+    const input = document.getElementById('spark-input');
+    const canvas = document.getElementById('sigil-canvas');
+    const ctx = canvas.getContext('2d');
+    const equationOutput = document.getElementById('equation-output');
+    const interpretationOutput = document.getElementById('interpretation-output');
+
+    // Initialize interpreter and noise with Norse runic config
+    const interpreter = new TauTongueInterpreter(NORSE_CONFIG);
+    const simplex = new SimplexNoise();
+
+    let currentResult = null;
+    let time = 0;
+    let animationFrameId = null;
+
+    const colors = {
+      1: '#22c55e', // Green (Midgard - earth)
+      2: '#fbbf24', // Gold (Asgard - divine)
+      3: '#a855f7', // Violet (Vanaheim - seidr magic)
+      4: '#38bdf8', // Light blue (Alfheim - ethereal)
+      5: '#6b7280', // Steel (Svartalfheim - forged metal)
+      6: '#93c5fd', // Ice blue (Niflheim - primordial ice)
+      7: '#ef4444', // Fire red (Muspelheim - primordial fire)
+      8: '#1e293b', // Dark slate (Helheim - death)
+      9: '#8b5cf6', // Purple (Jotunheim - primal chaos)
+      24: '#f8fafc'  // White (Yggdrasil - all-binding)
+    };
+
+    function hexToRgb(hex) {
+      const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+      return result ? {
+        r: parseInt(result[1], 16),
+        g: parseInt(result[2], 16),
+        b: parseInt(result[3], 16)
+      } : { r: 255, g: 255, b: 255 };
+    }
+
+    function drawFrame() {
+      // Clear canvas with a slight fade for motion blur effect
+      ctx.globalCompositeOperation = 'source-over';
+      ctx.fillStyle = '#050508';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+      if (!currentResult) {
+        ctx.fillStyle = '#334';
+        ctx.font = "40px 'Segoe UI'";
+        ctx.textAlign = 'center';
+        ctx.fillText("Awaiting Spark...", canvas.width/2, canvas.height/2);
+        animationFrameId = requestAnimationFrame(drawFrame);
+        return;
+      }
+
+      const cx = canvas.width / 2;
+      const cy = canvas.height / 2;
+      const braid = currentResult.braid;
+      const digitalSum = currentResult.digitalSum;
+      const centerColor = colors[digitalSum] || '#888';
+
+      // Use screen blending for glowing energy effect
+      ctx.globalCompositeOperation = 'screen';
+
+      // Draw each braid item as a layer of aether
+      braid.forEach((item, i) => {
+        const match = item.equation.match(/\((.*?)\)/);
+        const paramsStr = match ? match[1] : '';
+        const params = paramsStr.split(',').map(Number).filter(n => !isNaN(n));
+        
+        const paramSum = params.reduce((a, b) => a + b, 0);
+        const dr = calculateDigitalRoot(paramSum.toString()) || 1;
+        const layerColor = hexToRgb(colors[dr] || centerColor);
+
+        // Parameters dictate the nature of the noise
+        const baseRadius = 150 + i * 80;
+        const complexity = params.length > 0 ? params[0] : 3; // Frequency of noise
+        const volatility = params.length > 1 ? params[1] : 5; // Amplitude of noise
+        const speed = params.length > 2 ? params[2] : 4;      // Speed of evolution
+
+        // Draw multiple overlapping auras per layer to create depth
+        // REDUCED from 3 to 2 for performance
+        for (let aura = 0; aura < 2; aura++) {
+          ctx.beginPath();
+          const points = [];
+          // REDUCED from 150 to 80 for performance (still smooth enough for organic shapes)
+          const numPoints = 80; 
+          
+          for (let j = 0; j < numPoints; j++) {
+            const angle = (j / numPoints) * Math.PI * 2;
+            
+            // 3D noise: X, Y mapped to circle, Z mapped to time
+            // Offset Z by aura index so they drift slightly apart
+            const noiseVal = simplex.noise3D(
+              Math.cos(angle) * complexity * 0.3, 
+              Math.sin(angle) * complexity * 0.3, 
+              time * speed * 0.002 + aura * 10
+            );
+            
+            const radius = baseRadius + noiseVal * volatility * 25 + (aura * 30);
+            points.push({
+              x: cx + Math.cos(angle) * radius,
+              y: cy + Math.sin(angle) * radius
+            });
+          }
+
+          // Draw smooth closed curve
+          ctx.moveTo(points[0].x, points[0].y);
+          for (let j = 1; j < points.length; j++) {
+            ctx.lineTo(points[j].x, points[j].y);
+          }
+          ctx.closePath();
+
+          // Fill with a soft radial gradient
+          const gradient = ctx.createRadialGradient(cx, cy, baseRadius * 0.2, cx, cy, baseRadius * 1.8);
+          gradient.addColorStop(0, `rgba(${layerColor.r}, ${layerColor.g}, ${layerColor.b}, 0.0)`);
+          gradient.addColorStop(0.5, `rgba(${layerColor.r}, ${layerColor.g}, ${layerColor.b}, 0.12)`);
+          gradient.addColorStop(1, `rgba(${layerColor.r}, ${layerColor.g}, ${layerColor.b}, 0.0)`);
+
+          ctx.fillStyle = gradient;
+          ctx.fill();
+          
+          // Add a subtle glowing edge
+          ctx.lineWidth = 2;
+          ctx.strokeStyle = `rgba(${layerColor.r}, ${layerColor.g}, ${layerColor.b}, 0.4)`;
+          ctx.stroke();
+        }
+      });
+      
+      // Draw the bright, pulsating core
+      const coreColor = hexToRgb(centerColor);
+      const corePulse = Math.sin(time * 0.05) * 20;
+      const coreRadius = 80 + corePulse;
+      
+      const coreGrad = ctx.createRadialGradient(cx, cy, 0, cx, cy, coreRadius * 2);
+      coreGrad.addColorStop(0, `rgba(255, 255, 255, 0.9)`);
+      coreGrad.addColorStop(0.3, `rgba(${coreColor.r}, ${coreColor.g}, ${coreColor.b}, 0.7)`);
+      coreGrad.addColorStop(1, `rgba(${coreColor.r}, ${coreColor.g}, ${coreColor.b}, 0)`);
+      
+      ctx.fillStyle = coreGrad;
+      ctx.beginPath();
+      ctx.arc(cx, cy, coreRadius * 2, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Advance time
+      time += 1;
+      animationFrameId = requestAnimationFrame(drawFrame);
+    }
+
+    function updateAether() {
+      const spark = input.value.trim();
+      if (!spark) {
+        currentResult = null;
+        equationOutput.textContent = "Enter a spark to see its symbolic equation...";
+        interpretationOutput.style.display = 'none';
+        return;
+      }
+      
+      try {
+        currentResult = interpreter.interpret(spark);
+        
+        // Update UI
+        equationOutput.innerHTML = `<strong>Equation:</strong><br/>${currentResult.symbolicEquation}<br/><br/><strong>Digital Sum:</strong> ${currentResult.digitalSum} (${currentResult.archetype})`;
+        
+        interpretationOutput.style.display = 'block';
+        interpretationOutput.textContent = currentResult.narrativeInterpretation;
+      } catch (err) {
+        currentResult = null;
+        equationOutput.textContent = `Error: ${err.message}`;
+        console.error(err);
+      }
+    }
+
+    input.addEventListener('input', updateAether);
+    
+    // Start the animation loop
+    drawFrame();
+    updateAether();
+  </script>
+</body>
+</html>

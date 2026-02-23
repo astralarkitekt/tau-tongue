@@ -420,9 +420,7 @@
       // Numerical Analysis
       md += `## Numerical Analysis\n\n`;
       md += `**Numero Cipher:** ${result.numeroCipher.join(', ')}\n\n`;
-      if (result.alphaCipher) {
-        md += `**Alpha Cipher:** ${result.alphaCipher.join(', ')}\n\n`;
-      }
+
       md += `**Digital Sum:** ${result.digitalSum}\n\n`;
       
       // Archetypal Resonance
@@ -574,14 +572,7 @@
             </div>
           </div>
 
-          ${result.alphaCipher ? `
-          <div class="field">
-            <div class="field-label">Alpha Cipher - Phonetic Variations (alphaCipher)</div>
-            <div class="field-value array">
-              ${result.alphaCipher.map(a => `<span class="array-item">${escapeHtml(a)}</span>`).join('')}
-            </div>
-          </div>
-          ` : ''}
+
 
           <div class="field">
             <div class="field-label">Digital Sum (digitalSum)</div>

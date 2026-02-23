@@ -1,0 +1,507 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Tau-Tongue Astrolabe — Alchemical System</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: #0a0a12;
+      color: #e0e0e0;
+      min-height: 100vh;
+      padding: 2rem;
+    }
+
+    .container {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 2rem;
+      max-width: 1600px;
+      margin: 0 auto;
+    }
+
+    @media (min-width: 900px) {
+      .container {
+        grid-template-columns: 1fr 1fr;
+        align-items: start;
+      }
+    }
+
+    .header {
+      margin-bottom: 2rem;
+    }
+
+    .header h1 {
+      font-size: 2.5rem;
+      background: linear-gradient(135deg, #fbbf24, #f59e0b, #d97706);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      margin-bottom: 0.5rem;
+    }
+
+    .header p {
+      color: #888;
+      font-size: 1.1rem;
+    }
+
+    .controls {
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+      margin-bottom: 2rem;
+    }
+
+    .controls textarea {
+      width: 100%;
+      min-height: 120px;
+      padding: 1rem;
+      background: #1a1a2e;
+      border: 1px solid #333;
+      border-radius: 8px;
+      color: #e0e0e0;
+      font-size: 1rem;
+      font-family: inherit;
+      outline: none;
+      resize: vertical;
+      transition: border-color 0.2s;
+    }
+
+    .controls textarea:focus {
+      border-color: #f59e0b;
+    }
+
+    .sigil-stage {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      background: #0a0a12;
+      border: 1px solid #222;
+      border-radius: 12px;
+      width: 100%;
+      aspect-ratio: 1 / 1;
+      overflow: hidden;
+      box-shadow: inset 0 0 100px rgba(0,0,0,0.8);
+    }
+
+    .sigil-stage canvas {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+    }
+
+    .equation-display {
+      padding: 1.5rem;
+      background: #1a1a2e;
+      border: 1px solid #333;
+      border-radius: 8px;
+      font-family: 'Courier New', monospace;
+      font-size: 0.95rem;
+      color: #f59e0b;
+      word-break: break-all;
+      min-height: 3rem;
+      line-height: 1.5;
+    }
+    
+    .interpretation {
+      margin-top: 1.5rem;
+      padding: 1.5rem;
+      background: #1a1a2e;
+      border: 1px solid #333;
+      border-radius: 8px;
+      font-size: 0.95rem;
+      color: #a0a0b0;
+      line-height: 1.6;
+      white-space: pre-wrap;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="left-panel">
+      <div class="header">
+        <h1>Tau-Tongue Astrolabe</h1>
+        <p>An alchemical orrery — custom symbolic system via TauTongueConfig</p>
+      </div>
+
+      <div class="controls">
+        <textarea id="spark-input" placeholder="Type a spark phrase to align the astrolabe..."></textarea>
+      </div>
+
+      <div class="equation-display" id="equation-output">
+        Enter a spark to see its symbolic equation...
+      </div>
+      
+      <div class="interpretation" id="interpretation-output" style="display: none;">
+      </div>
+    </div>
+
+    <div class="right-panel">
+      <div class="sigil-stage">
+        <canvas id="sigil-canvas" width="2048" height="2048"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <script type="module">
+    import {
+      TauTongueInterpreter,
+      calculateDigitalRoot,
+      SceneFunction,
+    } from '../dist/index.js';
+
+    // ---- v3.4: Alchemical Symbolic System ----
+    // 7 classical planets as archetypes, alchemical processes as resonances,
+    // typal numbers [7, 12] (7 metals, 12 zodiacal operations)
+    const ALCHEMICAL_CONFIG = {
+      archetypeMap: {
+        1: 'Sol',
+        2: 'Luna',
+        3: 'Mercurius',
+        4: 'Venus',
+        5: 'Mars',
+        6: 'Jupiter',
+        7: 'Saturnus',
+        8: 'The Quintessence',
+        9: 'The Philosopher\'s Stone',
+        12: 'The Great Work',
+      },
+      archetypeDescriptions: {
+        'Sol': 'Gold — the perfected self; illumination and conscious will.',
+        'Luna': 'Silver — the reflective soul; intuition and the unconscious.',
+        'Mercurius': 'Quicksilver — the messenger; volatility, transformation, and communication.',
+        'Venus': 'Copper — the heart; beauty, desire, and creative union.',
+        'Mars': 'Iron — the blade; force, conflict, and purification through fire.',
+        'Jupiter': 'Tin — the expander; growth, abundance, and benevolent order.',
+        'Saturnus': 'Lead — the prima materia; limitation, time, and the base substance.',
+        'The Quintessence': 'The fifth element — the spirit binding all things.',
+        'The Philosopher\'s Stone': 'The perfected union of all elements — wholeness achieved.',
+        'The Great Work': 'Opus Magnum — the complete alchemical transformation.',
+      },
+      resonanceMap: {
+        1: 'CALCINATION',
+        2: 'DISSOLUTION',
+        3: 'SEPARATION',
+        4: 'CONJUNCTION',
+        5: 'FERMENTATION',
+        6: 'DISTILLATION',
+        7: 'COAGULATION',
+        8: 'PROJECTION',
+        9: 'MULTIPLICATION',
+        12: 'TRANSMUTATION',
+      },
+      resonanceDescriptions: {
+        'CALCINATION': 'Burning away the dross; destruction of ego and attachment.',
+        'DISSOLUTION': 'Dissolving the calcined ash; surrendering to the unconscious.',
+        'SEPARATION': 'Filtering the dissolved material; discernment and choice.',
+        'CONJUNCTION': 'Recombining the purified elements; sacred marriage of opposites.',
+        'FERMENTATION': 'Introducing new life; inspiration and spiritual rebirth.',
+        'DISTILLATION': 'Purifying the fermented substance; refinement of the spirit.',
+        'COAGULATION': 'Solidifying the distilled essence; the birth of the Stone.',
+        'PROJECTION': 'The Stone\'s power to transform; radiating perfected energy.',
+        'MULTIPLICATION': 'Amplifying the Stone\'s potency; completion approaching wholeness.',
+        'TRANSMUTATION': 'The Great Work complete; lead into gold, self into Self.',
+      },
+      archetypeFunctionMap: {
+        1: SceneFunction.EXPOSITION,
+        2: SceneFunction.REFLECTION,
+        3: SceneFunction.TRANSITION,
+        4: SceneFunction.DIALOGUE,
+        5: SceneFunction.ACTION,
+        6: SceneFunction.EXPOSITION,
+        7: SceneFunction.FLASHBACK,
+        8: SceneFunction.CALLBACK,
+        9: SceneFunction.ACTION,
+        12: SceneFunction.TRANSITION,
+      },
+      typalNumbers: [7, 12],
+    };
+    const input = document.getElementById('spark-input');
+    const canvas = document.getElementById('sigil-canvas');
+    const ctx = canvas.getContext('2d');
+    const equationOutput = document.getElementById('equation-output');
+    const interpretationOutput = document.getElementById('interpretation-output');
+
+    // Initialize interpreter with alchemical config
+    const interpreter = new TauTongueInterpreter(ALCHEMICAL_CONFIG);
+
+    let currentResult = null;
+    let celestialBodies = [];
+    let time = 0;
+    let animationFrameId = null;
+
+    const colors = {
+      1: '#fbbf24', // Gold (Sol)
+      2: '#c0c0c0', // Silver (Luna)
+      3: '#8b5cf6', // Purple (Mercurius)
+      4: '#f472b6', // Pink-Copper (Venus)
+      5: '#ef4444', // Red (Mars)
+      6: '#3b82f6', // Blue (Jupiter)
+      7: '#6b7280', // Lead-grey (Saturnus)
+      8: '#22d3ee', // Cyan (Quintessence)
+      9: '#f59e0b', // Amber (Philosopher's Stone)
+      12: '#f8fafc'  // White (The Great Work)
+    };
+
+    function drawRune(x, y, radius, text, color, isSun = false) {
+      // Draw the body
+      ctx.beginPath();
+      ctx.arc(x, y, radius, 0, Math.PI * 2);
+      
+      if (isSun) {
+        // Sun gets a massive glowing gradient
+        const grad = ctx.createRadialGradient(x, y, radius * 0.2, x, y, radius * 2);
+        grad.addColorStop(0, '#fff');
+        grad.addColorStop(0.2, color);
+        grad.addColorStop(1, 'rgba(0,0,0,0)');
+        ctx.fillStyle = grad;
+        ctx.fill();
+        
+        // Solid core
+        ctx.beginPath();
+        ctx.arc(x, y, radius, 0, Math.PI * 2);
+        ctx.fillStyle = '#111';
+        ctx.fill();
+        ctx.lineWidth = 4;
+        ctx.strokeStyle = color;
+        ctx.stroke();
+      } else {
+        // Planets and moons
+        ctx.fillStyle = '#111';
+        ctx.fill();
+        ctx.lineWidth = 2;
+        ctx.strokeStyle = color;
+        ctx.stroke();
+        
+        // Subtle glow
+        ctx.shadowBlur = 15;
+        ctx.shadowColor = color;
+        ctx.stroke();
+        ctx.shadowBlur = 0;
+      }
+
+      // Draw the rune/number
+      ctx.fillStyle = isSun ? color : '#e0e0e0';
+      let fontSize = radius * 1.2;
+      if (text.length > 1) fontSize = radius * 0.8; // Scale down double digits
+      
+      ctx.font = `${isSun ? 'bold ' : ''}${fontSize}px 'Segoe UI', sans-serif`;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      
+      // Add a slight glow to the text itself
+      ctx.shadowBlur = 10;
+      ctx.shadowColor = color;
+      ctx.fillText(text, x, y);
+      ctx.shadowBlur = 0;
+    }
+
+    function drawOrbitRing(cx, cy, radius, color, dashArray = []) {
+      ctx.beginPath();
+      ctx.arc(cx, cy, radius, 0, Math.PI * 2);
+      ctx.lineWidth = 1;
+      ctx.strokeStyle = color;
+      ctx.setLineDash(dashArray);
+      ctx.stroke();
+      ctx.setLineDash([]); // Reset
+    }
+
+    function drawFrame() {
+      // Clear canvas
+      ctx.globalCompositeOperation = 'source-over';
+      ctx.fillStyle = '#0a0a12';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+      if (!currentResult || celestialBodies.length === 0) {
+        ctx.fillStyle = '#334';
+        ctx.font = "40px 'Segoe UI'";
+        ctx.textAlign = 'center';
+        ctx.fillText("Awaiting Spark...", canvas.width/2, canvas.height/2);
+        animationFrameId = requestAnimationFrame(drawFrame);
+        return;
+      }
+
+      const cx = canvas.width / 2;
+      const cy = canvas.height / 2;
+      
+      const sunColor = colors[currentResult.digitalSum] || '#888';
+      const sunRune = currentResult.symbolicEquation.charAt(0);
+      const sunRadius = 120;
+
+      // 1. Draw the Sun (Proto-Crucible)
+      // Calculate planet position
+      celestialBodies.forEach((planet, i) => {
+        const pAngle = planet.startAngle + (time * planet.speed);
+        const px = cx + Math.cos(pAngle) * planet.orbitRadius;
+        const py = cy + Math.sin(pAngle) * planet.orbitRadius;
+
+        // Draw planet's orbital ring around the sun
+        // Make the ring dashed based on its digital root for a mechanical feel
+        drawOrbitRing(cx, cy, planet.orbitRadius, `rgba(255,255,255,0.1)`, [5, planet.dr * 2]);
+
+        // Draw tether from sun to planet
+        ctx.beginPath();
+        ctx.moveTo(cx, cy);
+        ctx.lineTo(px, py);
+        ctx.lineWidth = 1;
+        ctx.strokeStyle = `rgba(255,255,255,0.05)`;
+        ctx.stroke();
+
+        // Draw Moons (Parameters)
+        planet.moons.forEach((moon, j) => {
+          const mAngle = moon.startAngle + (time * moon.speed);
+          const mx = px + Math.cos(mAngle) * moon.orbitRadius;
+          const my = py + Math.sin(mAngle) * moon.orbitRadius;
+
+          // Draw moon's orbital ring around the planet
+          drawOrbitRing(px, py, moon.orbitRadius, `rgba(255,255,255,0.05)`, [2, 4]);
+
+          // Draw tether from planet to moon
+          ctx.beginPath();
+          ctx.moveTo(px, py);
+          ctx.lineTo(mx, my);
+          ctx.lineWidth = 0.5;
+          ctx.strokeStyle = `rgba(255,255,255,0.1)`;
+          ctx.stroke();
+
+          // Draw the moon itself (Number)
+          drawRune(mx, my, moon.radius, moon.val.toString(), moon.color);
+        });
+
+        // Draw the planet itself (Operator Rune)
+        drawRune(px, py, planet.radius, planet.rune, planet.color);
+      });
+
+      // Draw the Sun (Proto-Crucible) on top of everything
+      drawRune(cx, cy, sunRadius, sunRune, sunColor, true);
+
+      // Draw an outer astrolabe ring for framing
+      const maxOrbit = celestialBodies.length > 0 
+        ? Math.max(...celestialBodies.map(p => p.orbitRadius + (p.moons.length > 0 ? Math.max(...p.moons.map(m => m.orbitRadius)) : 0)))
+        : sunRadius;
+      
+      const outerRingRadius = maxOrbit + 100;
+      
+      ctx.beginPath();
+      ctx.arc(cx, cy, outerRingRadius, 0, Math.PI * 2);
+      ctx.lineWidth = 2;
+      ctx.strokeStyle = `rgba(255,255,255,0.2)`;
+      ctx.stroke();
+      
+      // Tick marks on the outer ring
+      for(let i=0; i<72; i++) {
+        const angle = (i / 72) * Math.PI * 2;
+        const innerR = i % 6 === 0 ? outerRingRadius - 20 : outerRingRadius - 10;
+        ctx.beginPath();
+        ctx.moveTo(cx + Math.cos(angle) * innerR, cy + Math.sin(angle) * innerR);
+        ctx.lineTo(cx + Math.cos(angle) * outerRingRadius, cy + Math.sin(angle) * outerRingRadius);
+        ctx.lineWidth = i % 6 === 0 ? 2 : 1;
+        ctx.strokeStyle = `rgba(255,255,255,0.3)`;
+        ctx.stroke();
+      }
+
+      time += 1;
+      animationFrameId = requestAnimationFrame(drawFrame);
+    }
+
+    function updateAstrolabe() {
+      const spark = input.value.trim();
+      if (!spark) {
+        currentResult = null;
+        celestialBodies = [];
+        equationOutput.textContent = "Enter a spark to align the astrolabe...";
+        interpretationOutput.style.display = 'none';
+        return;
+      }
+      
+      // Helper function to fold orbits back inward when they hit the canvas bounds
+      function foldRadius(rawRadius, minR, maxR) {
+        if (rawRadius <= maxR) return rawRadius;
+        const range = maxR - minR;
+        const offset = rawRadius - minR;
+        const cycles = Math.floor(offset / range);
+        const remainder = offset % range;
+        
+        // Even cycles go outward, odd cycles bounce inward
+        return (cycles % 2 === 0) ? minR + remainder : maxR - remainder;
+      }
+      
+      try {
+        currentResult = interpreter.interpret(spark);
+        
+        // Map the braid to celestial bodies
+        const numPlanets = currentResult.braid.length;
+        const baseOrbitSpacing = 180; // Distance between planetary orbits
+        
+        celestialBodies = currentResult.braid.map((item, i) => {
+          const rune = item.equation.charAt(0);
+          const match = item.equation.match(/\((.*?)\)/);
+          const paramsStr = match ? match[1] : '';
+          const params = paramsStr.split(',').map(Number).filter(n => !isNaN(n));
+          
+          const paramSum = params.reduce((a, b) => a + b, 0);
+          const dr = calculateDigitalRoot(paramSum.toString()) || 1;
+          
+          const planetColor = colors[dr] || '#888';
+          
+          // Calculate raw radius, then fold it between 250 (sun edge) and 850 (canvas edge)
+          const rawOrbitRadius = 250 + (i * baseOrbitSpacing);
+          const orbitRadius = foldRadius(rawOrbitRadius, 250, 850);
+          
+          // Map parameters to moons
+          const moons = params.map((p, j) => {
+            const moonColor = colors[p] || '#aaa';
+            
+            // Fold moon orbits between 60 (planet edge) and 160 (max moon distance)
+            const rawMoonOrbitRadius = 60 + (j * 35);
+            const moonOrbitRadius = foldRadius(rawMoonOrbitRadius, 60, 160);
+            
+            return {
+              val: p,
+              color: moonColor,
+              radius: 15 + (p * 1.5), // Size based on parameter value
+              orbitRadius: moonOrbitRadius, // Folded distance from planet
+              speed: (p % 2 === 0 ? 1 : -1) * (0.02 + (p * 0.005)), // Speed and direction based on value
+              startAngle: (j / params.length) * Math.PI * 2
+            };
+          });
+
+          return {
+            rune: rune,
+            dr: dr,
+            color: planetColor,
+            radius: 40 + (dr * 2), // Size based on digital root
+            orbitRadius: orbitRadius,
+            speed: (dr % 2 === 0 ? 1 : -1) * (0.002 + (dr * 0.001)), // Slower than moons
+            startAngle: (i / numPlanets) * Math.PI * 2,
+            moons: moons
+          };
+        });
+
+        // Update UI
+        equationOutput.innerHTML = `<strong>Equation:</strong><br/>${currentResult.symbolicEquation}<br/><br/><strong>Digital Sum:</strong> ${currentResult.digitalSum} (${currentResult.archetype})`;
+        
+        interpretationOutput.style.display = 'block';
+        interpretationOutput.textContent = currentResult.narrativeInterpretation;
+      } catch (err) {
+        currentResult = null;
+        celestialBodies = [];
+        equationOutput.textContent = `Error: ${err.message}`;
+        console.error(err);
+      }
+    }
+
+    input.addEventListener('input', updateAstrolabe);
+    
+    // Start the animation loop
+    drawFrame();
+    updateAstrolabe();
+  </script>
+</body>
+</html>

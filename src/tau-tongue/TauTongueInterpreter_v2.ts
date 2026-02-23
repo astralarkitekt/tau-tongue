@@ -1,16 +1,16 @@
-import { getSymbol, getSymbols } from "./TauTongueSymbolMap.js";
+import { DEFAULT_SYMBOL_MAP, type SymbolDefinition } from "./TauTongueSymbolMap.js";
 import { renderTauSpiral, type TauInput } from "./TauTongueRenderer.js";
 import {
   calculateDigitalRoot,
   convertToNumbers as convertToNumbersPythagorean,
+  type PythagoreanConfig,
+  DEFAULT_TYPAL_NUMBERS,
 } from "../pythagoreanUtils.js";
-import { guessPythagoreanWord } from "../phonemeCipher.js";
 // import symbolMapData from './symbol-map.json';
 
 export interface TauTongueResult {
   input: string;
   numeroCipher: number[];
-  alphaCipher?: string[];
   digitalSum: number;
   resonance: string;
   resonanceMeaning: string;
@@ -80,77 +80,172 @@ export interface NarrativePalette {
   crucible: number;
 }
 
+// --- Exported default maps ---
+
+/** Default archetype map — digital root → archetype name (BraidCraft system). */
+export const DEFAULT_ARCHETYPE_MAP: Record<number, string> = {
+  1: "The Dreamweaver",
+  2: "The Recursivist",
+  3: "The Architect",
+  4: "The Oracle",
+  5: "The Catalyst",
+  6: "The Empath",
+  7: "The Archivist",
+  8: "The Mechanist",
+  9: "The Alchemist",
+  11: "The Weaver of Fields",
+  22: "The Mask Maker",
+};
+
+/** Default archetype descriptions — archetype name → prose description (BraidCraft system). */
+export const DEFAULT_ARCHETYPE_DESCRIPTIONS: Record<string, string> = {
+  "The Dreamweaver":
+    "One who weaves dreams into reality, connecting the unseen world with the visible.",
+  "The Recursivist":
+    "One who sees patterns within patterns, creating self-referential systems.",
+  "The Architect":
+    "One who designs and builds structures, bringing order to chaos.",
+  "The Oracle":
+    "One who sees beyond the veil of time, perceiving future potentials.",
+  "The Catalyst":
+    "One who initiates change and transformation, sparking new possibilities.",
+  "The Empath":
+    "One who resonates with the emotions and energies of others, creating harmony.",
+  "The Archivist":
+    "One who preserves knowledge and wisdom, maintaining continuity through time.",
+  "The Mechanist":
+    "One who understands systems and mechanisms, creating order through structure.",
+  "The Alchemist":
+    "One who transmutes base elements into refined expressions, finding wholeness.",
+  "The Weaver of Fields":
+    "One who perceives the interconnected nature of all fields of knowledge.",
+  "The Mask Maker":
+    "One who crafts identities and personas, revealing deeper truths through illusion.",
+};
+
+/** Default resonance map — digital root → resonance name (BraidCraft system). */
+export const DEFAULT_RESONANCE_MAP: Record<number, string> = {
+  1: "SOURCE",
+  2: "DUALITY",
+  3: "CREATION",
+  4: "STRUCTURE",
+  5: "CHANGE",
+  6: "HARMONY",
+  7: "MYSTERY",
+  8: "POWER",
+  9: "FULFILLMENT",
+  11: "VISION",
+  22: "MASTERWORK",
+};
+
+/** Default resonance descriptions — resonance name → prose description (BraidCraft system). */
+export const DEFAULT_RESONANCE_DESCRIPTIONS: Record<string, string> = {
+  SOURCE:
+    "The origin point; unified consciousness; the beginning of all things.",
+  DUALITY: "The division into pairs; balance; reflection; cooperation.",
+  CREATION: "The spark of manifestation; expression; creativity; growth.",
+  STRUCTURE: "Framework; order; stability; the form that holds the content.",
+  CHANGE: "Transformation; adaptation; evolution; the flow of life.",
+  HARMONY: "Balance; integration; cooperation; resonant frequency.",
+  MYSTERY: "The unknowable; depth; spirituality; hidden knowledge.",
+  POWER:
+    "Manifestation; authority; transformation; capacity to effect change.",
+  FULFILLMENT: "Completion; wholeness; achievement; integration of parts.",
+  VISION: "Expanded awareness; prophecy; insight; seeing beyond the veil.",
+  MASTERWORK: "The great work; mastery of form; transcendent creation.",
+};
+
+/** Default mapping from digital root → narrative scene function (BraidCraft system). */
+export const DEFAULT_ARCHETYPE_FUNCTION_MAP: Record<number, SceneFunction> = {
+  1: SceneFunction.EXPOSITION, // Dreamweaver
+  2: SceneFunction.CALLBACK, // Recursivist
+  3: SceneFunction.ACTION, // Architect
+  4: SceneFunction.REFLECTION, // Oracle
+  5: SceneFunction.ACTION, // Catalyst
+  6: SceneFunction.DIALOGUE, // Empath
+  7: SceneFunction.FLASHBACK, // Archivist
+  8: SceneFunction.ACTION, // Mechanist
+  9: SceneFunction.TRANSITION, // Alchemist
+  11: SceneFunction.EXPOSITION, // Weaver of Fields
+  22: SceneFunction.DIALOGUE, // Mask Maker
+};
+
+// --- Config interface ---
+
+/**
+ * Configuration object for the Tau-Tongue symbolic pipeline.
+ *
+ * Every field is optional — omitted fields fall back to the BraidCraft defaults.
+ * Supply a complete config to operate the pipeline within an entirely custom
+ * symbolic system (archetypes, resonances, operator algebra, typal numbers).
+ *
+ * @example
+ * ```ts
+ * const alchemical: TauTongueConfig = {
+ *   archetypeMap: { 1: 'Sol', 2: 'Luna', 3: 'Mercurius', ... },
+ *   resonanceMap: { 1: 'CALCINATION', 2: 'DISSOLUTION', ... },
+ *   typalNumbers: [7, 12],
+ * };
+ * const interpreter = new TauTongueInterpreter(alchemical);
+ * ```
+ */
+export interface TauTongueConfig {
+  /** Digital root → archetype name. Keys define valid reduction endpoints. */
+  archetypeMap?: Record<number, string>;
+  /** Archetype name → prose description. */
+  archetypeDescriptions?: Record<string, string>;
+  /** Digital root → resonance label (e.g. `"SOURCE"`, `"CALCINATION"`). */
+  resonanceMap?: Record<number, string>;
+  /** Resonance label → prose description. */
+  resonanceDescriptions?: Record<string, string>;
+  /** Digital root → narrative scene function (used by TauSpine). */
+  archetypeFunctionMap?: Record<number, SceneFunction>;
+  /** Custom operator algebra — symbol → {@link SymbolDefinition}. */
+  symbolMap?: Record<string, SymbolDefinition>;
+  /** Numbers that halt digital-root reduction (default: `[11, 22]`). */
+  typalNumbers?: number[];
+}
+
 export class TauTongueInterpreter {
-  private readonly archetypeMap: Record<number, string> = {
-    1: "The Dreamweaver",
-    2: "The Recursivist",
-    3: "The Architect",
-    4: "The Oracle",
-    5: "The Catalyst",
-    6: "The Empath",
-    7: "The Archivist",
-    8: "The Mechanist",
-    9: "The Alchemist",
-    11: "The Weaver of Fields",
-    22: "The Mask Maker",
-  };
+  protected readonly archetypeMap: Record<number, string>;
+  protected readonly archetypeDescriptions: Record<string, string>;
+  protected readonly resonanceMap: Record<number, string>;
+  protected readonly resonanceDescriptions: Record<string, string>;
+  protected readonly ARCHETYPE_FUNCTION_MAP: Record<number, SceneFunction>;
+  protected readonly pythagoreanConfig: PythagoreanConfig;
+  protected readonly symbolMapData: Record<string, SymbolDefinition>;
 
-  private readonly archetypeDescriptions: Record<string, string> = {
-    "The Dreamweaver":
-      "One who weaves dreams into reality, connecting the unseen world with the visible.",
-    "The Recursivist":
-      "One who sees patterns within patterns, creating self-referential systems.",
-    "The Architect":
-      "One who designs and builds structures, bringing order to chaos.",
-    "The Oracle":
-      "One who sees beyond the veil of time, perceiving future potentials.",
-    "The Catalyst":
-      "One who initiates change and transformation, sparking new possibilities.",
-    "The Empath":
-      "One who resonates with the emotions and energies of others, creating harmony.",
-    "The Archivist":
-      "One who preserves knowledge and wisdom, maintaining continuity through time.",
-    "The Mechanist":
-      "One who understands systems and mechanisms, creating order through structure.",
-    "The Alchemist":
-      "One who transmutes base elements into refined expressions, finding wholeness.",
-    "The Weaver of Fields":
-      "One who perceives the interconnected nature of all fields of knowledge.",
-    "The Mask Maker":
-      "One who crafts identities and personas, revealing deeper truths through illusion.",
-  };
+  private readonly symbolKeys: string[];
 
-  private readonly resonanceDescriptions: Record<string, string> = {
-    SOURCE:
-      "The origin point; unified consciousness; the beginning of all things.",
-    DUALITY: "The division into pairs; balance; reflection; cooperation.",
-    CREATION: "The spark of manifestation; expression; creativity; growth.",
-    STRUCTURE: "Framework; order; stability; the form that holds the content.",
-    CHANGE: "Transformation; adaptation; evolution; the flow of life.",
-    HARMONY: "Balance; integration; cooperation; resonant frequency.",
-    MYSTERY: "The unknowable; depth; spirituality; hidden knowledge.",
-    POWER:
-      "Manifestation; authority; transformation; capacity to effect change.",
-    FULFILLMENT: "Completion; wholeness; achievement; integration of parts.",
-    VISION: "Expanded awareness; prophecy; insight; seeing beyond the veil.",
-    MASTERWORK: "The great work; mastery of form; transcendent creation.",
-  };
+  constructor(config: TauTongueConfig = {}) {
+    this.archetypeMap = config.archetypeMap ?? DEFAULT_ARCHETYPE_MAP;
+    this.archetypeDescriptions = config.archetypeDescriptions ?? DEFAULT_ARCHETYPE_DESCRIPTIONS;
+    this.resonanceMap = config.resonanceMap ?? DEFAULT_RESONANCE_MAP;
+    this.resonanceDescriptions = config.resonanceDescriptions ?? DEFAULT_RESONANCE_DESCRIPTIONS;
+    this.ARCHETYPE_FUNCTION_MAP = config.archetypeFunctionMap ?? DEFAULT_ARCHETYPE_FUNCTION_MAP;
+    this.symbolMapData = config.symbolMap ?? DEFAULT_SYMBOL_MAP;
+    this.symbolKeys = Object.keys(this.symbolMapData);
 
-  private readonly ARCHETYPE_FUNCTION_MAP: Record<number, SceneFunction> = {
-    1: SceneFunction.EXPOSITION, // Dreamweaver
-    2: SceneFunction.CALLBACK, // Recursivist
-    3: SceneFunction.ACTION, // Architect
-    4: SceneFunction.REFLECTION, // Oracle
-    5: SceneFunction.ACTION, // Catalyst
-    6: SceneFunction.DIALOGUE, // Empath
-    7: SceneFunction.FLASHBACK, // Archivist
-    8: SceneFunction.ACTION, // Mechanist
-    9: SceneFunction.TRANSITION, // Alchemist
-    11: SceneFunction.EXPOSITION, // Weaver of Fields
-    22: SceneFunction.DIALOGUE, // Mask Maker
-  };
+    // Derived — consumer never touches this
+    this.pythagoreanConfig = {
+      archetypes: this.archetypeMap,
+      typalNumbers: config.typalNumbers ?? DEFAULT_TYPAL_NUMBERS,
+    };
+  }
 
-  private readonly symbolMap: string[] = getSymbols();
+  /**
+   * Get all symbol keys from the injected symbol map
+   */
+  protected getSymbols(): string[] {
+    return this.symbolKeys;
+  }
+
+  /**
+   * Look up a symbol definition from the injected symbol map
+   */
+  protected getSymbol(symbol: string): SymbolDefinition | undefined {
+    return this.symbolMapData[symbol];
+  }
 
   /**
    * Convert text to numbers using Pythagorean numerology
@@ -165,21 +260,8 @@ export class TauTongueInterpreter {
   /**
    * Get symbolic meaning for a number
    */
-  private getSymbolicMeaning(n: number): string {
-    const lexicon: Record<number, string> = {
-      1: "SOURCE",
-      2: "DUALITY",
-      3: "CREATION",
-      4: "STRUCTURE",
-      5: "CHANGE",
-      6: "HARMONY",
-      7: "MYSTERY",
-      8: "POWER",
-      9: "FULFILLMENT",
-      11: "VISION",
-      22: "MASTERWORK",
-    };
-    return lexicon[n] || "UNKNOWN";
+  protected getSymbolicMeaning(n: number): string {
+    return this.resonanceMap[n] || "UNKNOWN";
   }
 
   /**
@@ -187,18 +269,11 @@ export class TauTongueInterpreter {
    */
   private reduceCipher(nums: number[]): number {
     const sum = nums.reduce((a, b) => a + b, 0);
-    const digitalRoot = (n: number): number => {
-      if (n === 11 || n === 22) return n;
-      return n < 10
-        ? n
-        : digitalRoot(
-            n
-              .toString()
-              .split("")
-              .reduce((a, b) => a + parseInt(b), 0)
-          );
-    };
-    return digitalRoot(sum);
+    const result = calculateDigitalRoot(sum.toString(), this.pythagoreanConfig);
+    if (result === null) {
+      throw new Error("Digital root is null");
+    }
+    return result;
   }
 
   private getSymbolicOperators(
@@ -212,12 +287,12 @@ export class TauTongueInterpreter {
     while (digits.length > 0) {
       const selection = this.skipSelector(digits, lastLength, 0);
       const index = Number(
-        BigInt(selection.result.join("")) % BigInt(this.symbolMap.length)
+        BigInt(selection.result.join("")) % BigInt(this.symbolKeys.length)
       );
-      const op = this.symbolMap[index];
+      const op = this.symbolKeys[index];
       functions.push(this.wrap(op, selection.result.join(",")));
       digits = selection.digits;
-      const digitalRoot = calculateDigitalRoot(selection.result.join(""));
+      const digitalRoot = calculateDigitalRoot(selection.result.join(""), this.pythagoreanConfig);
       if (digitalRoot === null) {
         console.error("Digital root is null");
         throw new Error("Digital root is null");
@@ -226,8 +301,8 @@ export class TauTongueInterpreter {
     }
 
     const outerOp =
-      this.symbolMap[
-        Number(BigInt(numeroCipher.join("")) % BigInt(this.symbolMap.length))
+      this.symbolKeys[
+        Number(BigInt(numeroCipher.join("")) % BigInt(this.symbolKeys.length))
       ];
     return this.wrap(
       outerOp,
@@ -266,7 +341,8 @@ export class TauTongueInterpreter {
       digits = digits.filter((_, i) => i !== index);
       index = (index + skip) % digits.length;
       const digitalRoot = calculateDigitalRoot(
-        result.reduce((a, b) => a + b, 0).toString()
+        result.reduce((a, b) => a + b, 0).toString(),
+        this.pythagoreanConfig
       );
       if (digitalRoot === null) {
         console.error("Digital root is null");
@@ -285,7 +361,7 @@ export class TauTongueInterpreter {
    * Extract symbols from equation
    */
   private extractSymbols(equation: string): string[] {
-    return Array.from(equation).filter((char) => getSymbol(char));
+    return Array.from(equation).filter((char) => this.getSymbol(char));
   }
 
   /**
@@ -301,7 +377,8 @@ export class TauTongueInterpreter {
     const uniqueSymbols = Array.from(new Set(symbols));
 
     uniqueSymbols.forEach((symbol) => {
-      const desc = getSymbol(symbol);
+      const desc = this.getSymbol(symbol);
+      if (!desc) return;
       interpretation += `• ${symbol} (${desc.name}): ${desc.metaphoricalMeaning}\n`;
     });
 
@@ -325,17 +402,17 @@ export class TauTongueInterpreter {
       `represented by the digital root ${digitalSum}. This places you in the archetypal \n` +
       `realm of ${archetype}. The symbolic equation reveals a pattern of` +
       (uniqueSymbols.length > 0
-        ? ` ${getSymbol(uniqueSymbols[0]).metaphoricalMeaning.toLowerCase()}`
+        ? ` ${this.getSymbol(uniqueSymbols[0])?.metaphoricalMeaning.toLowerCase() ?? "hidden meanings"}`
         : " hidden meanings") +
       (uniqueSymbols.length > 1
-        ? ` interwoven with ${getSymbol(
+        ? ` interwoven with ${this.getSymbol(
             uniqueSymbols[1]
-          ).metaphoricalMeaning.toLowerCase()}`
+          )?.metaphoricalMeaning.toLowerCase() ?? ""}`
         : "") +
       (uniqueSymbols.length > 2
-        ? `, culminating in ${getSymbol(
+        ? `, culminating in ${this.getSymbol(
             uniqueSymbols[uniqueSymbols.length - 1]
-          ).metaphoricalMeaning.toLowerCase()}`
+          )?.metaphoricalMeaning.toLowerCase() ?? ""}`
         : "") +
       `.`
     );
@@ -384,17 +461,9 @@ export class TauTongueInterpreter {
       input.trim() === "" ? 0 : input.trim().split(/\s+/).length;
     const charCount = input.length;
 
-    // get a string of characters for name-generation from the braid
-    const braidCipher = this.getBraid(symbolicEquation).replace(
-      /(?!(?:11|22|[0-9]))[^]/g,
-      ""
-    );
-    const alphaCipher = guessPythagoreanWord(braidCipher, digitalSum, 1);
-
     const result: TauTongueResult = {
       input,
       numeroCipher,
-      alphaCipher,
       digitalSum,
       resonance,
       resonanceMeaning:
@@ -424,7 +493,7 @@ export class TauTongueInterpreter {
     // slice the symbol from the function string (0, 1)
     const crucibleOperator = func.slice(0, 1);
     // get the metaphorical meaning of the operator
-    const operatorSymbol = getSymbol(crucibleOperator);
+    const operatorSymbol = this.getSymbol(crucibleOperator);
     if (!operatorSymbol) {
       return `Unknown operator: ${crucibleOperator}`;
     }
@@ -486,7 +555,7 @@ export class TauTongueInterpreter {
       .filter((char) => /[1-9]/.test(char))
       .map(Number)
       .join("");
-    const digitalRoot = calculateDigitalRoot(braidDigits);
+    const digitalRoot = calculateDigitalRoot(braidDigits, this.pythagoreanConfig);
     if (digitalRoot === null) {
       console.error("Digital root is null");
       throw new Error("Digital root is null");
@@ -515,7 +584,7 @@ export class TauTongueInterpreter {
       .map(Number)
       .join("");
 
-    const digitalRoot = calculateDigitalRoot(antagonistDigits);
+    const digitalRoot = calculateDigitalRoot(antagonistDigits, this.pythagoreanConfig);
     const resonance = this.getSymbolicMeaning(digitalRoot || 0);
     const resonanceMeaning =
       this.resonanceDescriptions[resonance] || "Unknown resonance";
@@ -614,7 +683,7 @@ export class TauTongueInterpreter {
     const transformedDigits = digitArray.map((digit) => {
       const currentDigit = parseInt(digit);
       const product = equationDigitalSum * currentDigit;
-      const digitalRoot = calculateDigitalRoot(product.toString());
+      const digitalRoot = calculateDigitalRoot(product.toString(), this.pythagoreanConfig);
       return digitalRoot?.toString() || digit;
     });
 
@@ -636,7 +705,7 @@ export class TauTongueInterpreter {
     
     // Calculate crucible (digital root of braid numbers)
     const crucibleDigits = braidNumbers.join('');
-    const crucible = calculateDigitalRoot(crucibleDigits);
+    const crucible = calculateDigitalRoot(crucibleDigits, this.pythagoreanConfig);
     if (crucible === null) {
       throw new Error("Could not calculate crucible from braid");
     }

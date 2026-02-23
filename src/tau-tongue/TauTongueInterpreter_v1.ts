@@ -161,6 +161,7 @@ export class TauTongueInterpreter {
     
     uniqueSymbols.forEach(symbol => {
       const desc = getSymbol(symbol);
+      if (!desc) return;
       interpretation += `• ${symbol} (${desc.name}): ${desc.metaphoricalMeaning}\n`;
     });
     
@@ -178,9 +179,9 @@ export class TauTongueInterpreter {
       `Your phrase "${input}" resonates with the energy of ${resonance.toLowerCase()}, \n` +
       `represented by the digital root ${digitalSum}. This places you in the archetypal \n` +
       `realm of ${archetype}. The symbolic equation reveals a pattern of` +
-      (uniqueSymbols.length > 0 ? ` ${getSymbol(uniqueSymbols[0]).metaphoricalMeaning.toLowerCase()}` : ' hidden meanings') +
-      (uniqueSymbols.length > 1 ? ` interwoven with ${getSymbol(uniqueSymbols[1]).metaphoricalMeaning.toLowerCase()}` : '') +
-      (uniqueSymbols.length > 2 ? `, culminating in ${getSymbol(uniqueSymbols[uniqueSymbols.length-1]).metaphoricalMeaning.toLowerCase()}` : '') +
+      (uniqueSymbols.length > 0 ? ` ${getSymbol(uniqueSymbols[0])?.metaphoricalMeaning.toLowerCase() ?? 'hidden meanings'}` : ' hidden meanings') +
+      (uniqueSymbols.length > 1 ? ` interwoven with ${getSymbol(uniqueSymbols[1])?.metaphoricalMeaning.toLowerCase() ?? ''}` : '') +
+      (uniqueSymbols.length > 2 ? `, culminating in ${getSymbol(uniqueSymbols[uniqueSymbols.length-1])?.metaphoricalMeaning.toLowerCase() ?? ''}` : '') +
       `.`
     );
   }
