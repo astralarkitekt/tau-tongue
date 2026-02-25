@@ -1,8 +1,8 @@
 /**
  * Jung-Tongue — a Jungian symbolic system for the Tau-Tongue pipeline.
  *
- * 12 archetypes mapped to digital roots 1-9, 11, 12.
- * Typal numbers [11, 12] halt digital-root reduction.
+ * 12 archetypes mapped to digital roots 1-12.
+ * Typal numbers [10, 11, 12] halt digital-root reduction.
  * Uses the default 256-symbol operator algebra (no custom symbolMap).
  *
  * @see TauTongueConfig
@@ -23,6 +23,7 @@ export const JUNG_CONFIG = {
     7:  'The Sage',
     8:  'The Persona',
     9:  'The Self',
+    10: 'The Child',
     11: 'The Syzygy',
     12: 'The Individuation',
   },
@@ -46,6 +47,8 @@ export const JUNG_CONFIG = {
       'The social mask — the face worn for the world, useful yet dangerously mistaken for self.',
     'The Self':
       'The totality of the psyche — the union of opposites; the mandala at the centre.',
+    'The Child':
+      'The eternal youth — innocence, wonder, and the seed of infinite possibility before the ego hardens.',
     'The Syzygy':
       'The divine pair — the sacred marriage of Anima and Animus, reconciling all polarities.',
     'The Individuation':
@@ -62,6 +65,7 @@ export const JUNG_CONFIG = {
     7:  'GNOSIS',
     8:  'ADAPTATION',
     9:  'MANDALA',
+    10: 'PUER',
     11: 'CONIUNCTIO',
     12: 'OPUS',
   },
@@ -85,6 +89,8 @@ export const JUNG_CONFIG = {
       'The persona\'s function — fitting self to world without losing the inner truth.',
     'MANDALA':
       'The symbol of wholeness; the circle that reconciles all fragments into unity.',
+    'PUER':
+      'The eternal child archetype in motion; beginnings, play, and the refusal to calcify.',
     'CONIUNCTIO':
       'The alchemical wedding; the union of opposites that births the philosopher\'s stone.',
     'OPUS':
@@ -101,10 +107,11 @@ export const JUNG_CONFIG = {
     7:  SceneFunction.REFLECTION,   // Sage — contemplates
     8:  SceneFunction.CALLBACK,     // Persona — echoes what was shown
     9:  SceneFunction.EXPOSITION,   // Self — reveals the whole
+    10: SceneFunction.EXPOSITION,   // Child — the origin story, the life before the mask
     11: SceneFunction.DIALOGUE,     // Syzygy — two voices merge
     12: SceneFunction.TRANSITION,   // Individuation — passage to new state
   },
 
-  // [11, 12] — master numbers that halt digital-root reduction
-  typalNumbers: [11, 12],
+  // [10, 11, 12] — typal numbers that halt digital-root reduction
+  typalNumbers: [10, 11, 12],
 };
