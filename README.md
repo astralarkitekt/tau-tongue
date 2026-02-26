@@ -310,4 +310,4 @@ Demos load from `../dist/index.js` as ES modules — open any HTML file in `demo
 
 **Astral Arkitekt** — [astralarkitekt@gmail.com](mailto:astralarkitekt@gmail.com)
 
-Built with deterministic algebra, zero LLMs, and an unreasonable amount of love.
+Built with deterministic algebra, insomnia, and an unreasonable amount of love. I mean coffee.
