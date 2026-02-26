@@ -1,4 +1,4 @@
-// Main exports for the Tau-Tongue library
+// Main exports for the Tau-Tongue library (v3 — config-injectable)
 export {
   TauTongueInterpreter,
   DEFAULT_ARCHETYPE_MAP,
@@ -7,7 +7,7 @@ export {
   DEFAULT_RESONANCE_DESCRIPTIONS,
   DEFAULT_ARCHETYPE_FUNCTION_MAP,
   SceneFunction,
-} from './tau-tongue/TauTongueInterpreter_v2.js';
+} from './tau-tongue/TauTongueInterpreter_v3.js';
 export type { 
   TauTongueResult, 
   TauTongueAntagonist,
@@ -16,6 +16,25 @@ export type {
   RenderOptions,
   NarrativePalette,
   TauTongueConfig,
+} from './tau-tongue/TauTongueInterpreter_v3.js';
+
+// Legacy interpreter exports (v1 and v2 — hardcoded BraidCraft defaults)
+export {
+  TauTongueInterpreter as TauTongueInterpreterV1,
+} from './tau-tongue/TauTongueInterpreter_v1.js';
+export type {
+  TauTongueResult as TauTongueResultV1,
+} from './tau-tongue/TauTongueInterpreter_v1.js';
+
+export {
+  TauTongueInterpreter as TauTongueInterpreterV2,
+} from './tau-tongue/TauTongueInterpreter_v2.js';
+export type {
+  TauTongueResult as TauTongueResultV2,
+  TauTongueAntagonist as TauTongueAntagonistV2,
+  BraidInterpretation as BraidInterpretationV2,
+  InflectionPoint as InflectionPointV2,
+  NarrativePalette as NarrativePaletteV2,
 } from './tau-tongue/TauTongueInterpreter_v2.js';
 
 // TauSpine exports

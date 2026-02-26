@@ -17,15 +17,29 @@
     "type": "git",
     "url": "git+https://github.com/astralarkitekt/tau-tongue.git"
   },
+  "license": "MIT",
   "publishConfig": {
-    "access": "restricted",
-    "registry": "https://npm.pkg.github.com/"
+    "access": "public"
   },
   "devDependencies": {
     "@types/node": "^24.6.2",
     "typescript": "^5.2.2"
   },
-  "keywords": [],
+  "keywords": [
+    "symbolic-algebra",
+    "narrative-generation",
+    "procedural-generation",
+    "numerology",
+    "pythagorean",
+    "storytelling",
+    "text-analysis",
+    "digital-root",
+    "braids",
+    "archetypes",
+    "config-injectable",
+    "tau-tongue",
+    "braidcraft"
+  ],
   "dependencies": {
     "canvas": "^3.2.0",
     "hash-wasm": "^4.12.0"

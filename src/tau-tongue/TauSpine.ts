@@ -1,4 +1,4 @@
-import { TauTongueInterpreter, type TauTongueConfig, type TauTongueResult } from './TauTongueInterpreter_v2.js';
+import { TauTongueInterpreter, type TauTongueConfig, type TauTongueResult } from './TauTongueInterpreter_v3.js';
 import { calculateDigitalRoot, cipherCycle as pythagoreanCipherCycle, convertToNumbers } from '../pythagoreanUtils.js';
 import archetypeFictionTypeMap from './archetype-fiction-type-map.json' with { type: 'json' };
 import storyUnitSpecs from './story-unit-specs.json' with { type: 'json' };
