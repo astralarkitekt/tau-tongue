@@ -17,6 +17,12 @@ As of v3.6.9, the entire pipeline is **config-injectable**. Supply a `TauTongueC
 
 **The constraint doesn't change. The vocabulary does.**
 
+Learn more about how to use Tau-Tongue on the Astral Architecture blog!
+
+[Tau-Tongue & Braidcraft: My secret sauce to writing better faster](https://www.astralarchitecture.com/blog/2026/tau-tongue-and-braidcraft/)
+
+Website in the works!
+
 ---
 
 ## Quick Start
