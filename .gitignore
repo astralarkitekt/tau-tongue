@@ -149,3 +149,7 @@ logs
 # yarn.lock
 # Keep pnpm-lock.yaml if using pnpm
 # pnpm-lock.yaml
+
+.npmrc
+.yarnrc
+.pnpmrc
