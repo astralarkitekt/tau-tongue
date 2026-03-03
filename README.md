@@ -2,7 +2,7 @@
 
 **A symbolic narrative algebra for meaning-making and storytelling.**
 
-[![Version](https://img.shields.io/badge/version-3.6.10-blueviolet)]()
+[![Version](https://img.shields.io/badge/version-3.7.0-blueviolet)]()
 [![TypeScript](https://img.shields.io/badge/TypeScript-ESM-blue)]()
 
 ---
@@ -129,6 +129,8 @@ const interpreter = new TauTongueInterpreter(config?: TauTongueConfig);
 | `getInterferenceWave(result)` | `string` | Calculate the Braid Interference Wave. |
 | `extractNarrativePalette(braid)` | `NarrativePalette` | Analyze the distribution of scene functions across the braid. |
 | `getFunctionDescription(func)` | `string` | Get a prose description for a symbolic function string. |
+| `getSymbol(symbol)` | `SymbolDefinition \| undefined` | Look up a symbol definition from the configured symbol map. |
+| `getSymbols()` | `string[]` | Get all symbol keys from the configured symbol map. |
 | `render(canvas, result, options?)` | `void` | Render the tau spiral visualization on an HTML canvas. |
 
 ### Legacy Interpreters (v1 & v2)
