@@ -2,7 +2,7 @@
 
 **A symbolic narrative algebra for meaning-making and storytelling.**
 
-[![Version](https://img.shields.io/badge/version-3.6.10-blueviolet)]()
+[![Version](https://img.shields.io/badge/version-3.7.0-blueviolet)]()
 [![TypeScript](https://img.shields.io/badge/TypeScript-ESM-blue)]()
 
 ---
