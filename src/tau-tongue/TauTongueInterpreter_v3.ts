@@ -237,7 +237,7 @@ export class TauTongueInterpreter {
    * Get all symbol keys from the injected symbol map
    */
   public getSymbols(): string[] {
-    return this.symbolKeys;
+    return [...this.symbolKeys];
   }
 
   /**

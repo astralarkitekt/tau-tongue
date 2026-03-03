@@ -10,6 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 - Changed `getSymbol()` and `getSymbols()` instance methods from `protected` to `public` in `TauTongueInterpreter` (v3)
 - These methods now provide the proper replacement API for the deprecated standalone functions in `TauTongueSymbolMap`
+- `getSymbols()` now returns a defensive copy to prevent external mutation of internal state
 
 ### Fixed
 - Fixed API design issue where deprecated standalone functions directed users to inaccessible protected methods
