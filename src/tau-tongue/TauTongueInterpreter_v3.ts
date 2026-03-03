@@ -236,14 +236,14 @@ export class TauTongueInterpreter {
   /**
    * Get all symbol keys from the injected symbol map
    */
-  protected getSymbols(): string[] {
+  public getSymbols(): string[] {
     return this.symbolKeys;
   }
 
   /**
    * Look up a symbol definition from the injected symbol map
    */
-  protected getSymbol(symbol: string): SymbolDefinition | undefined {
+  public getSymbol(symbol: string): SymbolDefinition | undefined {
     return this.symbolMapData[symbol];
   }
 
