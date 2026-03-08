@@ -422,6 +422,10 @@ export class TauTongueInterpreter {
    * Main interpretation method - processes input and returns all computed values
    */
   public interpret(input: string): TauTongueResult {
+    if (!input || input.trim() === "") {
+      throw new Error("Input cannot be empty");
+    }
+    
     const numeroCipher = this.convertToNumbers(input);
     const digitalSum = this.reduceCipher(numeroCipher);
     const resonance = this.getSymbolicMeaning(digitalSum);

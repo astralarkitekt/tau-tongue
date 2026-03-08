@@ -5,6 +5,11 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.7.1] - 2026-03-07
+
+### Fixed
+- Fixed potential infinite loop when calling `interpret()` with empty or whitespace-only input (now throws descriptive error)
+
 ## [3.7.0] - 2026-03-03
 
 ### Changed
@@ -19,5 +24,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 _(Changelog tracking started with v3.7.0)_
 
+[3.7.1]: https://github.com/astralarkitekt/tau-tongue/compare/v3.7.0...v3.7.1
 [3.7.0]: https://github.com/astralarkitekt/tau-tongue/compare/v3.6.10...v3.7.0
 [3.6.10]: https://github.com/astralarkitekt/tau-tongue/releases/tag/v3.6.10
