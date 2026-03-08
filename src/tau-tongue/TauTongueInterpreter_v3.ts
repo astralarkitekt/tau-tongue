@@ -422,8 +422,8 @@ export class TauTongueInterpreter {
    * Main interpretation method - processes input and returns all computed values
    */
   public interpret(input: string): TauTongueResult {
-    if (!input || input.trim() === "") {
-      throw new Error("Input cannot be empty");
+    if (!/[a-zA-Z0-9]/.test(input)) {
+      throw new Error("Input must contain at least one letter or number");
     }
     
     const numeroCipher = this.convertToNumbers(input);
