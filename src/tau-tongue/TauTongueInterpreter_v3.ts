@@ -1,8 +1,12 @@
-import { DEFAULT_SYMBOL_MAP, type SymbolDefinition } from "./TauTongueSymbolMap.js";
+import {
+  DEFAULT_SYMBOL_MAP,
+  type SymbolDefinition,
+} from "./TauTongueSymbolMap.js";
 import { renderTauSpiral, type TauInput } from "./TauTongueRenderer.js";
 import {
   calculateDigitalRoot,
   convertToNumbers as convertToNumbersPythagorean,
+  cipherCycle,
   type PythagoreanConfig,
   DEFAULT_TYPAL_NUMBERS,
 } from "../pythagoreanUtils.js";
@@ -26,6 +30,8 @@ export interface TauTongueResult {
   wordCount: number;
   charCount: number;
   narrativeInterpretation: string;
+  vds: VDSResult;
+  archetypalMatrix: ArchetypalMatrix;
 }
 
 export interface TauTongueAntagonist {
@@ -42,6 +48,15 @@ export interface BraidInterpretation {
   equation: string;
   description: string;
   hasInflectionPoint?: boolean;
+  vds?: BraidVariantScore; // injected from VDS result
+  variants?: BraidVariant[]; // populated if canBranch === true
+}
+
+export interface BraidVariant {
+  equation: string;
+  description: string;
+  variantIndex: number; // 1, 2, or 3
+  prismFacet?: string; // optional — which PRISM spoke if used
 }
 
 export interface InflectionPoint {
@@ -78,6 +93,36 @@ export interface NarrativePalette {
   secondaryWeight: number | null;
   texture: { function: SceneFunction; weight: number }[];
   crucible: number;
+}
+
+export interface BraidVariantScore {
+  braidIndex: number;
+  pressureDensity: number;
+  variantCount: 0 | 1 | 2 | 3;
+  canBranch: boolean;
+}
+
+export interface VDSResult {
+  scores: BraidVariantScore[];
+  branchCount: number;
+  peakPressure: number;
+  organicCap: number;
+}
+
+// Archetypal distribution matrix interfaces
+export interface ArchetypalEntry {
+  digitalRoot: number;
+  count: number;
+  symbols: string[];
+  symbolNames: string[];
+  resonance: string;
+}
+
+export interface ArchetypalMatrix {
+  totalSymbols: number;
+  entries: ArchetypalEntry[];
+  dominantRoot: number;
+  diversity: number; // How spread out the distribution is
 }
 
 // --- Exported default maps ---
@@ -148,8 +193,7 @@ export const DEFAULT_RESONANCE_DESCRIPTIONS: Record<string, string> = {
   CHANGE: "Transformation; adaptation; evolution; the flow of life.",
   HARMONY: "Balance; integration; cooperation; resonant frequency.",
   MYSTERY: "The unknowable; depth; spirituality; hidden knowledge.",
-  POWER:
-    "Manifestation; authority; transformation; capacity to effect change.",
+  POWER: "Manifestation; authority; transformation; capacity to effect change.",
   FULFILLMENT: "Completion; wholeness; achievement; integration of parts.",
   VISION: "Expanded awareness; prophecy; insight; seeing beyond the veil.",
   MASTERWORK: "The great work; mastery of form; transcendent creation.",
@@ -219,10 +263,13 @@ export class TauTongueInterpreter {
 
   constructor(config: TauTongueConfig = {}) {
     this.archetypeMap = config.archetypeMap ?? DEFAULT_ARCHETYPE_MAP;
-    this.archetypeDescriptions = config.archetypeDescriptions ?? DEFAULT_ARCHETYPE_DESCRIPTIONS;
+    this.archetypeDescriptions =
+      config.archetypeDescriptions ?? DEFAULT_ARCHETYPE_DESCRIPTIONS;
     this.resonanceMap = config.resonanceMap ?? DEFAULT_RESONANCE_MAP;
-    this.resonanceDescriptions = config.resonanceDescriptions ?? DEFAULT_RESONANCE_DESCRIPTIONS;
-    this.ARCHETYPE_FUNCTION_MAP = config.archetypeFunctionMap ?? DEFAULT_ARCHETYPE_FUNCTION_MAP;
+    this.resonanceDescriptions =
+      config.resonanceDescriptions ?? DEFAULT_RESONANCE_DESCRIPTIONS;
+    this.ARCHETYPE_FUNCTION_MAP =
+      config.archetypeFunctionMap ?? DEFAULT_ARCHETYPE_FUNCTION_MAP;
     this.symbolMapData = config.symbolMap ?? DEFAULT_SYMBOL_MAP;
     this.symbolKeys = Object.keys(this.symbolMapData);
 
@@ -278,7 +325,7 @@ export class TauTongueInterpreter {
 
   private getSymbolicOperators(
     masterResonance: number,
-    digits: number[]
+    digits: number[],
   ): string {
     const numeroCipher = [...digits]; // Create a proper copy
     const functions: string[] = [];
@@ -287,12 +334,15 @@ export class TauTongueInterpreter {
     while (digits.length > 0) {
       const selection = this.skipSelector(digits, lastLength, 0);
       const index = Number(
-        BigInt(selection.result.join("")) % BigInt(this.symbolKeys.length)
+        BigInt(selection.result.join("")) % BigInt(this.symbolKeys.length),
       );
       const op = this.symbolKeys[index];
       functions.push(this.wrap(op, selection.result.join(",")));
       digits = selection.digits;
-      const digitalRoot = calculateDigitalRoot(selection.result.join(""), this.pythagoreanConfig);
+      const digitalRoot = calculateDigitalRoot(
+        selection.result.join(""),
+        this.pythagoreanConfig,
+      );
       if (digitalRoot === null) {
         console.error("Digital root is null");
         throw new Error("Digital root is null");
@@ -306,7 +356,7 @@ export class TauTongueInterpreter {
       ];
     return this.wrap(
       outerOp,
-      [masterResonance, "[" + functions.join(",") + "]"].join(",")
+      [masterResonance, "[" + functions.join(",") + "]"].join(","),
     );
   }
 
@@ -321,7 +371,7 @@ export class TauTongueInterpreter {
     digits: number[],
     length: number,
     skipBy: number,
-    startFromIndex: number = 0
+    startFromIndex: number = 0,
   ): { digits: number[]; result: number[] } {
     const result: number[] = [];
     let index = startFromIndex;
@@ -342,7 +392,7 @@ export class TauTongueInterpreter {
       index = (index + skip) % digits.length;
       const digitalRoot = calculateDigitalRoot(
         result.reduce((a, b) => a + b, 0).toString(),
-        this.pythagoreanConfig
+        this.pythagoreanConfig,
       );
       if (digitalRoot === null) {
         console.error("Digital root is null");
@@ -392,7 +442,7 @@ export class TauTongueInterpreter {
     equation: string,
     resonance: string,
     digitalSum: number,
-    archetype: string
+    archetype: string,
   ): string {
     const symbols = this.extractSymbols(equation);
     const uniqueSymbols = Array.from(new Set(symbols));
@@ -405,14 +455,18 @@ export class TauTongueInterpreter {
         ? ` ${this.getSymbol(uniqueSymbols[0])?.metaphoricalMeaning.toLowerCase() ?? "hidden meanings"}`
         : " hidden meanings") +
       (uniqueSymbols.length > 1
-        ? ` interwoven with ${this.getSymbol(
-            uniqueSymbols[1]
-          )?.metaphoricalMeaning.toLowerCase() ?? ""}`
+        ? ` interwoven with ${
+            this.getSymbol(
+              uniqueSymbols[1],
+            )?.metaphoricalMeaning.toLowerCase() ?? ""
+          }`
         : "") +
       (uniqueSymbols.length > 2
-        ? `, culminating in ${this.getSymbol(
-            uniqueSymbols[uniqueSymbols.length - 1]
-          )?.metaphoricalMeaning.toLowerCase() ?? ""}`
+        ? `, culminating in ${
+            this.getSymbol(
+              uniqueSymbols[uniqueSymbols.length - 1],
+            )?.metaphoricalMeaning.toLowerCase() ?? ""
+          }`
         : "") +
       `.`
     );
@@ -425,28 +479,28 @@ export class TauTongueInterpreter {
     if (!/[a-zA-Z0-9]/.test(input)) {
       throw new Error("Input must contain at least one letter or number");
     }
-    
+
     const numeroCipher = this.convertToNumbers(input);
     const digitalSum = this.reduceCipher(numeroCipher);
     const resonance = this.getSymbolicMeaning(digitalSum);
     const archetype = this.archetypeMap[digitalSum] || "The Unknown";
     const symbolicEquation = this.getSymbolicOperators(
       digitalSum,
-      numeroCipher
+      numeroCipher,
     );
     const interpretation = this.interpretEquation(symbolicEquation); // needs refactoring
     const narrativeInterpretation = this.generateNarrativeInterpretation(
       symbolicEquation,
       resonance,
       digitalSum,
-      archetype
+      archetype,
     ); // needs refactoring
 
     const crucible = this.getCrucible(
       symbolicEquation,
       digitalSum,
       resonance,
-      archetype
+      archetype,
     );
     const crucibleDescription = this.getFunctionDescription(crucible);
     const braid = this.getBraid(symbolicEquation)
@@ -485,10 +539,24 @@ export class TauTongueInterpreter {
       wordCount,
       charCount,
       narrativeInterpretation,
+      vds: {
+        scores: [],
+        branchCount: 0,
+        peakPressure: 0,
+        organicCap: 0,
+      },
+      archetypalMatrix: {
+        totalSymbols: 0,
+        entries: [],
+        dominantRoot: 0,
+        diversity: 0,
+      },
     };
 
     // Analyze interference patterns
     result.inflectionPoints = this.analyzeInterference(result);
+    result.vds = this.calculateVDS(result);
+    result.archetypalMatrix = this.extractArchetypalMatrix(symbolicEquation);
 
     return result;
   }
@@ -539,7 +607,7 @@ export class TauTongueInterpreter {
     symbolicEquation: string,
     digitalSum: number,
     resonance: string,
-    archetype: string
+    archetype: string,
   ): string {
     // get the crucible operator from the symbolic equation
     const crucibleOperator = symbolicEquation.slice(0, 1);
@@ -554,12 +622,11 @@ export class TauTongueInterpreter {
 
   public getMicroCrucible(braidFunction: string): string {
     const operator = braidFunction.slice(0, 1);
-    const braidDigits = braidFunction
-      .split("")
-      .filter((char) => /[1-9]/.test(char))
-      .map(Number)
-      .join("");
-    const digitalRoot = calculateDigitalRoot(braidDigits, this.pythagoreanConfig);
+    const braidNumbers = this.extractBraidNumbers(braidFunction);
+    const digitalRoot = calculateDigitalRoot(
+      braidNumbers.join(""),
+      this.pythagoreanConfig,
+    );
     if (digitalRoot === null) {
       console.error("Digital root is null");
       throw new Error("Digital root is null");
@@ -581,14 +648,12 @@ export class TauTongueInterpreter {
       }
     });
 
-    // get all digits from the longest function
-    const antagonistDigits = longestFunction
-      .split("")
-      .filter((char) => /[1-9]/.test(char))
-      .map(Number)
-      .join("");
+    const antagonistNumbers = this.extractBraidNumbers(longestFunction);
 
-    const digitalRoot = calculateDigitalRoot(antagonistDigits, this.pythagoreanConfig);
+    const digitalRoot = calculateDigitalRoot(
+      antagonistNumbers.join(""),
+      this.pythagoreanConfig,
+    );
     const resonance = this.getSymbolicMeaning(digitalRoot || 0);
     const resonanceMeaning =
       this.resonanceDescriptions[resonance] || "Unknown resonance";
@@ -603,7 +668,7 @@ export class TauTongueInterpreter {
         longestFunction,
         digitalRoot || 0,
         resonance,
-        archetype
+        archetype,
       ),
       archetype,
       archetypeDescription,
@@ -627,30 +692,27 @@ export class TauTongueInterpreter {
     const inflectionPoints: InflectionPoint[] = [];
     const interferenceWave = this.getInterferenceWave(result);
 
-    if (!interferenceWave || !result.braid || result.braid.length === 0) {
+    if (interferenceWave.length === 0 || !result.braid || result.braid.length === 0) {
       return inflectionPoints;
     }
 
     // Loop through each braid function
     result.braid.forEach((braid, braidIndex) => {
-      // Extract numeric digits 1-9 from the braid equation
-      const braidDigits = braid.equation
-        .split("")
-        .filter((char) => /[1-9]/.test(char));
+      const braidNumbers = this.extractBraidNumbers(braid.equation);
 
-      // Compare each digit with the interference wave
-      braidDigits.forEach((digit, digitIndex) => {
+      // Compare each value with the interference wave
+      braidNumbers.forEach((value, digitIndex) => {
         // Wrap around interference wave if braid is longer
         const interferenceIndex = digitIndex % interferenceWave.length;
-        const interferenceDigit = interferenceWave[interferenceIndex];
+        const interferenceValue = interferenceWave[interferenceIndex];
 
         // Check for match
-        if (digit === interferenceDigit) {
+        if (value === interferenceValue) {
           inflectionPoints.push({
             braidIndex,
             digitIndex,
-            digit,
-            interferenceDigit,
+            digit: value.toString(),
+            interferenceDigit: interferenceValue.toString(),
           });
           result.braid[braidIndex].hasInflectionPoint = true;
         }
@@ -663,36 +725,253 @@ export class TauTongueInterpreter {
   /**
    * Calculate the Braid Interference Wave
    */
-  public getInterferenceWave(result: TauTongueResult): string {
+  public getInterferenceWave(result: TauTongueResult): number[] {
     if (!result.braid || result.braid.length === 0) {
-      return "";
+      return [];
     }
 
     // Find the braid with the most parameters (longest equation)
     const longestBraid = result.braid.reduce((longest, current) =>
-      current.equation.length > longest.equation.length ? current : longest
+      current.equation.length > longest.equation.length ? current : longest,
     );
 
-    // Step 1: Filter to numbers 1-9 only (no zeroes)
-    const numbersOnly = longestBraid.equation
-      .split("")
-      .filter((char) => /[1-9]/.test(char))
-      .join("");
-
-    // Step 2: Explode into single character array
-    const digitArray = numbersOnly.split("");
-
-    // Step 3: Calculate digital root for each digit multiplied by equation's digital sum
+    const braidNumbers = this.extractBraidNumbers(longestBraid.equation);
     const equationDigitalSum = result.digitalSum;
-    const transformedDigits = digitArray.map((digit) => {
-      const currentDigit = parseInt(digit);
-      const product = equationDigitalSum * currentDigit;
-      const digitalRoot = calculateDigitalRoot(product.toString(), this.pythagoreanConfig);
-      return digitalRoot?.toString() || digit;
+
+    return braidNumbers.map((value) => {
+      const product = equationDigitalSum * value;
+      const digitalRoot = calculateDigitalRoot(
+        product.toString(),
+        this.pythagoreanConfig,
+      );
+      return digitalRoot ?? value;
+    });
+  }
+
+  /**
+   * Variant Determination Score
+   *
+   * Analyzes interference wave collision density per braid to determine
+   * which braids have sufficient narrative pressure to support fracticulation.
+   *
+   * Rules:
+   *  - Floor: 0.20 density minimum to qualify (clears random noise baseline)
+   *  - Cap: ⌊braidCount / 3⌋ max branch points, hard ceiling of 10
+   *  - Selection: top N braids by density, not everything above floor
+   *  - Variant tiers: 0.20–0.49 → 1, 0.50–0.79 → 2, 0.80+ → 3
+   */
+  public calculateVDS(result: TauTongueResult): VDSResult {
+    const braidCount = result.braid.length;
+
+    const HARD_CEILING = 10;
+    const organicCap = Math.min(
+      Math.max(1, Math.floor(braidCount / 3)),
+      HARD_CEILING,
+    );
+
+    // Score every braid by pressure density
+    const scores: BraidVariantScore[] = result.braid.map((b, braidIndex) => {
+      const totalDigits = this.extractBraidNumbers(b.equation).length || 1;
+      const collisions = result.inflectionPoints.filter(
+        (p) => p.braidIndex === braidIndex,
+      ).length;
+      const pressureDensity = collisions / totalDigits;
+
+      return {
+        braidIndex,
+        pressureDensity,
+        variantCount: 0 as 0 | 1 | 2 | 3,
+        canBranch: false,
+      };
     });
 
-    // Step 4: Join the array
-    return transformedDigits.join("");
+    const peakPressure = Math.max(...scores.map((s) => s.pressureDensity));
+    const DENSITY_FLOOR = peakPressure * 0.2; // Dynamic floor based on peak pressure
+
+    // Select top N above floor, ranked by density
+    const eligible = [...scores]
+      .filter((s) => s.pressureDensity >= DENSITY_FLOOR)
+      .sort((a, b) => b.pressureDensity - a.pressureDensity)
+      .slice(0, organicCap);
+
+    // Assign variant counts by density tier
+    eligible.forEach((s) => {
+      s.variantCount =
+        s.pressureDensity >= 0.8 ? 3 : s.pressureDensity >= 0.5 ? 2 : 1;
+      s.canBranch = true;
+      scores[s.braidIndex] = s;
+    });
+
+    const branchCount = scores.filter((s) => s.canBranch).length;
+
+    return {
+      scores,
+      branchCount,
+      peakPressure,
+      organicCap,
+    };
+  }
+
+  private selectSymbol(digits: number[]): string {
+    const index = Number(
+      BigInt(digits.join("")) % BigInt(this.symbolKeys.length),
+    );
+    return this.symbolKeys[index];
+  }
+
+  public async fracticulateBraid(
+    equation: string,
+    count: 1 | 2 | 3,
+    resonance: number,
+  ): Promise<BraidVariant[]> {
+    const variants: BraidVariant[] = [];
+
+    // Extract numeric values from braid equation
+    const braidNumbers = this.extractBraidNumbers(equation);
+
+    if (!braidNumbers.length) return variants;
+
+    // Chained cipherCycle — each variant feeds the next
+    let current = braidNumbers.join("");
+
+    for (let i = 0; i < count; i++) {
+      current = await cipherCycle(current, resonance, this.pythagoreanConfig);
+
+      const digitArr = current
+        .split("")
+        .map(Number)
+        .filter((n) => n > 0);
+
+      if (!digitArr.length) continue;
+
+      const symbol = this.selectSymbol(digitArr);
+      const eq = this.wrap(symbol, digitArr.join(","));
+
+      variants.push({
+        equation: eq,
+        description: this.getFunctionDescription(eq),
+        variantIndex: i + 1,
+      });
+    }
+
+    return variants;
+  }
+
+  public async fracticulatize(
+    result: TauTongueResult,
+  ): Promise<TauTongueResult> {
+    const enrichedBraid = await Promise.all(
+      result.braid.map(async (b, i) => {
+        const vds = result.vds.scores[i];
+        if (!vds?.canBranch) return b;
+
+        const variants = await this.fracticulateBraid(
+          b.equation,
+          vds.variantCount as any,
+          result.digitalSum,
+        );
+
+        return { ...b, variants };
+      }),
+    );
+
+    return { ...result, braid: enrichedBraid };
+  }
+
+  /**
+   * Extract archetypal distribution matrix from symbolic equation
+   */
+  public extractArchetypalMatrix(equation: string): ArchetypalMatrix {
+    // Initialize braid-level digital roots from config
+    const allRoots = Object.keys(this.archetypeMap).map(Number);
+    const rootGroups: Map<
+      number,
+      { symbols: Set<string>; names: Set<string>; count: number }
+    > = new Map();
+
+    // Initialize all roots with empty data
+    allRoots.forEach((root) => {
+      rootGroups.set(root, { symbols: new Set(), names: new Set(), count: 0 });
+    });
+
+    // Extract all bracketed function calls (braids)
+    const functionCalls = equation.match(/\[(.*?)\]/g);
+    if (functionCalls) {
+      functionCalls.forEach((call) => {
+        const content = call.slice(1, -1); // Remove [ and ]
+
+        // Extract all numeric values (supports multi-digit like 11, 22)
+        const numbers = (content.match(/\d+/g) || []).map(Number).filter((n) => n > 0);
+
+        // Count each value against configured archetype roots
+        numbers.forEach((num) => {
+          const group = rootGroups.get(num);
+          if (group) {
+            group.count++;
+          }
+        });
+      });
+    }
+
+    // Find symbols that resonate with each digital root
+    const symbolsInEquation = Array.from(equation).filter((char) => {
+      const symbolData = this.getSymbol(char);
+      return symbolData !== undefined;
+    });
+
+    symbolsInEquation.forEach((symbol) => {
+      const symbolData = this.getSymbol(symbol);
+      if (symbolData) {
+        const symbolBraid = symbol.charCodeAt(0).toString();
+        const symbolDigitalRoot = calculateDigitalRoot(
+          symbolBraid,
+          this.pythagoreanConfig,
+        );
+        if (symbolDigitalRoot === null) {
+          console.error("Symbol digital root is null");
+          throw new Error("Symbol digital root is null");
+        }
+
+        if (rootGroups.has(symbolDigitalRoot)) {
+          const group = rootGroups.get(symbolDigitalRoot)!;
+          group.symbols.add(symbol);
+          group.names.add(symbolData.name);
+        }
+      }
+    });
+
+    // Convert to entries array (always show all roots)
+    const entries: ArchetypalEntry[] = allRoots.map((digitalRoot) => {
+      const group = rootGroups.get(digitalRoot)!;
+      return {
+        digitalRoot,
+        count: group.count,
+        symbols: Array.from(group.symbols),
+        symbolNames: Array.from(group.names),
+        resonance: this.getSymbolicMeaning(digitalRoot),
+      };
+    });
+
+    // Find dominant root (highest count, with highest value winning ties)
+    const maxCount = Math.max(...entries.map((e) => e.count));
+    const dominantRoot = entries
+      .filter((e) => e.count === maxCount)
+      .reduce(
+        (max, entry) => (entry.digitalRoot > max ? entry.digitalRoot : max),
+        0,
+      );
+
+    // Calculate diversity (spread of counts)
+    const counts = entries.map((e) => e.count);
+    const diversity =
+      counts.length > 0 ? Math.max(...counts) - Math.min(...counts) : 0;
+
+    return {
+      totalSymbols: counts.reduce((sum, count) => sum + count, 0),
+      entries,
+      dominantRoot,
+      diversity,
+    };
   }
 
   /**
@@ -702,18 +981,21 @@ export class TauTongueInterpreter {
   public extractNarrativePalette(braid: string): NarrativePalette {
     // Extract numerical digits from braid (1-9 only)
     const braidNumbers = this.extractBraidNumbers(braid);
-    
+
     if (braidNumbers.length === 0) {
       throw new Error("No valid braid numbers found in braid string");
     }
-    
+
     // Calculate crucible (digital root of braid numbers)
-    const crucibleDigits = braidNumbers.join('');
-    const crucible = calculateDigitalRoot(crucibleDigits, this.pythagoreanConfig);
+    const crucibleDigits = braidNumbers.join("");
+    const crucible = calculateDigitalRoot(
+      crucibleDigits,
+      this.pythagoreanConfig,
+    );
     if (crucible === null) {
       throw new Error("Could not calculate crucible from braid");
     }
-    
+
     // Count occurrences of each scene function
     const counts: Record<SceneFunction, number> = {
       [SceneFunction.ACTION]: 0,
@@ -722,77 +1004,75 @@ export class TauTongueInterpreter {
       [SceneFunction.REFLECTION]: 0,
       [SceneFunction.FLASHBACK]: 0,
       [SceneFunction.CALLBACK]: 0,
-      [SceneFunction.TRANSITION]: 0
+      [SceneFunction.TRANSITION]: 0,
     };
-    
-    braidNumbers.forEach(n => {
+
+    braidNumbers.forEach((n) => {
       const fn = this.ARCHETYPE_FUNCTION_MAP[n];
       if (fn) counts[fn]++;
     });
-    
+
     // Convert to weights (percentages)
     const total = braidNumbers.length;
     const weights = Object.fromEntries(
-      Object.entries(counts).map(([fn, count]) => [fn, count / total])
+      Object.entries(counts).map(([fn, count]) => [fn, count / total]),
     ) as Record<SceneFunction, number>;
-    
+
     // Sort by weight descending
     const sorted = Object.entries(weights)
       .filter(([_, weight]) => weight > 0)
       .sort((a, b) => b[1] - a[1]);
-    
+
     // Determine dominant (use crucible for tiebreaking)
     const maxWeight = Math.max(...Object.values(weights));
     const tiedFunctions = Object.entries(weights)
       .filter(([_, weight]) => weight === maxWeight)
       .map(([fn]) => fn as SceneFunction);
-    
+
     let dominant: SceneFunction;
     if (tiedFunctions.length === 1) {
       dominant = tiedFunctions[0];
     } else {
       // Tiebreak using crucible's scene function
       const crucibleFunction = this.ARCHETYPE_FUNCTION_MAP[crucible];
-      dominant = tiedFunctions.includes(crucibleFunction) 
-        ? crucibleFunction 
+      dominant = tiedFunctions.includes(crucibleFunction)
+        ? crucibleFunction
         : tiedFunctions[0];
     }
-    
+
     const dominantWeight = weights[dominant];
-    
+
     // Find secondary (>=20% weight and not dominant)
-    const secondaryEntry = sorted.find(([fn, weight]) => 
-      fn !== dominant && weight >= 0.20
+    const secondaryEntry = sorted.find(
+      ([fn, weight]) => fn !== dominant && weight >= 0.2,
     );
-    
+
     // Texture = everything else with >0 weight
     const texture = sorted
       .filter(([fn]) => fn !== dominant && fn !== secondaryEntry?.[0])
       .filter(([_, weight]) => weight > 0)
-      .map(([fn, weight]) => ({ 
-        function: fn as SceneFunction, 
-        weight 
+      .map(([fn, weight]) => ({
+        function: fn as SceneFunction,
+        weight,
       }));
-    
+
     return {
       dominant,
       dominantWeight,
-      secondary: secondaryEntry ? secondaryEntry[0] as SceneFunction : null,
+      secondary: secondaryEntry ? (secondaryEntry[0] as SceneFunction) : null,
       secondaryWeight: secondaryEntry ? secondaryEntry[1] : null,
       texture,
-      crucible
+      crucible,
     };
   }
 
   /**
-   * Extract numerical digits (1-9) from braid string
+   * Extract numeric values from braid string (supports multi-digit values like 11, 22)
    */
   private extractBraidNumbers(braid: string): number[] {
-    // Extract all digits 1-9 from braid (no 11/22 at braid level)
-    return braid
-      .split('')
-      .filter(char => /[1-9]/.test(char))
-      .map(char => parseInt(char));
+    return (braid.match(/\d+/g) || [])
+      .map(Number)
+      .filter((n) => n > 0);
   }
 
   /**
@@ -801,7 +1081,7 @@ export class TauTongueInterpreter {
   public render(
     canvas: HTMLCanvasElement,
     result: TauTongueResult,
-    options: RenderOptions = {}
+    options: RenderOptions = {},
   ): void {
     if (result.numeroCipher.length === 0) {
       // Clear canvas if no input
