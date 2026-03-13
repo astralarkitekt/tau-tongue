@@ -1,6 +1,6 @@
 import { TauTongueInterpreter, type TauTongueConfig, type TauTongueResult, type ArchetypalMatrix, type ArchetypalEntry } from './TauTongueInterpreter_v3.js';
 export type { ArchetypalEntry, ArchetypalMatrix };
-import { calculateDigitalRoot, cipherCycle as pythagoreanCipherCycle, convertToNumbers } from '../pythagoreanUtils.js';
+import { calculateDigitalRoot, cipherCycle as pythagoreanCipherCycle } from '../pythagoreanUtils.js';
 import archetypeFictionTypeMap from './archetype-fiction-type-map.json' with { type: 'json' };
 import storyUnitSpecs from './story-unit-specs.json' with { type: 'json' };
 
@@ -429,10 +429,7 @@ export class TauSpine extends TauTongueInterpreter {
    * Extract numero cipher from spark
    */
   private extractNumeroCipher(spark: string): number[] {
-    return convertToNumbers(spark)
-      .split('')
-      .filter(char => !isNaN(Number(char)) && parseInt(char) > 0)
-      .map(Number);
+    return this.convertToNumbers(spark);
   }
   
   /**

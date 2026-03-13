@@ -260,6 +260,7 @@ export class TauTongueInterpreter {
   protected readonly symbolMapData: Record<string, SymbolDefinition>;
 
   private readonly symbolKeys: string[];
+  private readonly instanceNumerologyMap: Record<string, number> | null;
 
   constructor(config: TauTongueConfig = {}) {
     this.archetypeMap = config.archetypeMap ?? DEFAULT_ARCHETYPE_MAP;
@@ -278,6 +279,11 @@ export class TauTongueInterpreter {
       archetypes: this.archetypeMap,
       typalNumbers: config.typalNumbers ?? DEFAULT_TYPAL_NUMBERS,
     };
+
+    // Config-aware A-Z mapping — only when custom archetypeMap is provided
+    this.instanceNumerologyMap = config.archetypeMap
+      ? this.buildNumerologyMap()
+      : null;
   }
 
   /**
@@ -295,13 +301,50 @@ export class TauTongueInterpreter {
   }
 
   /**
-   * Convert text to numbers using Pythagorean numerology
+   * Convert text to numbers using Pythagorean numerology.
+   * When custom archetypeMap is provided, maps A-Z cyclically over the
+   * config's root set so multi-digit roots (11, 22, etc.) appear natively.
    */
-  private convertToNumbers(text: string): number[] {
-    return convertToNumbersPythagorean(text)
-      .split("")
-      .filter((char) => !isNaN(Number(char)) && parseInt(char) > 0)
-      .map(Number);
+  protected convertToNumbers(text: string): number[] {
+    if (!this.instanceNumerologyMap) {
+      // Default config — use traditional 1-9 Pythagorean mapping
+      return convertToNumbersPythagorean(text)
+        .split("")
+        .filter((char) => !isNaN(Number(char)) && parseInt(char) > 0)
+        .map(Number);
+    }
+
+    // Pure numeric input — single-digit parsing
+    if (/^[0-9\s]+$/.test(text)) {
+      return text.split("").filter((c) => /[1-9]/.test(c)).map(Number);
+    }
+
+    // Custom config — use config-derived cyclic mapping
+    const result: number[] = [];
+    for (const char of text.toUpperCase()) {
+      const mapped = this.instanceNumerologyMap[char];
+      if (mapped !== undefined) {
+        result.push(mapped);
+      } else if (/[1-9]/.test(char)) {
+        result.push(Number(char));
+      }
+    }
+    return result;
+  }
+
+  /**
+   * Build config-derived A-Z → root mapping by cycling the archetype root set
+   */
+  private buildNumerologyMap(): Record<string, number> {
+    const rootSet = Object.keys(this.archetypeMap)
+      .map(Number)
+      .sort((a, b) => a - b);
+    const map: Record<string, number> = {};
+    const letters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+    for (let i = 0; i < letters.length; i++) {
+      map[letters[i]] = rootSet[i % rootSet.length];
+    }
+    return map;
   }
 
   /**
