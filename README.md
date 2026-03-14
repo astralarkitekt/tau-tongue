@@ -2,7 +2,7 @@
 
 **A symbolic narrative algebra for meaning-making and storytelling.**
 
-[![Version](https://img.shields.io/badge/version-3.7.0-blueviolet)]()
+[![Version](https://img.shields.io/badge/version-3.8.0-blueviolet)]()
 [![TypeScript](https://img.shields.io/badge/TypeScript-ESM-blue)]()
 
 ---
@@ -44,7 +44,7 @@ console.log(result.crucible);            // "≳(8) - A mythic potential (≳) a
 console.log(result.narrativeInterpretation);
 ```
 
-The `TauTongueResult` object contains everything: digital root, archetype, resonance, symbolic equation, braid breakdown, crucible, antagonist, inflection points, and narrative interpretation.
+The `TauTongueResult` object contains everything: digital root, archetype, resonance, symbolic equation, braid breakdown, crucible, antagonist, inflection points, archetypal matrix, VDS (Variant Density Score), and narrative interpretation.
 
 ---
 
@@ -109,6 +109,36 @@ A typal number is any multi-digit number you want to preserve as a valid reducti
 
 Single-digit numbers (1–9) don't need to be listed — they're natural endpoints by definition.
 
+### Config-Aware Numerology Mapping
+
+**New in v3.8.0.** When a custom `archetypeMap` is provided, the interpreter automatically builds a config-derived A-Z mapping by cycling the alphabet over the sorted root set. This means multi-digit values like 10, 11, 12 appear **natively** in the numeroCipher, braids, interference wave, and archetypal matrix — no post-processing required.
+
+For example, a Jungian config with archetype keys `[1–12]` produces:
+
+```
+A=1  B=2  C=3  D=4  E=5  F=6  G=7  H=8  I=9  J=10  K=11  L=12
+M=1  N=2  O=3  P=4  Q=5  R=6  S=7  T=8  U=9  V=10  W=11  X=12
+Y=1  Z=2
+```
+
+When no custom `archetypeMap` is provided, the traditional Pythagorean mapping (cycling 1–9) is used unchanged. **Default-config behaviour is fully preserved.**
+
+### Fracticulation
+
+**New in v3.8.0.** Fracticulation generates variant braids via cipher-cycle evolution. Each braid in a result can branch into up to 3 variants based on its Variant Density Score (VDS) — a measure of pressure density derived from the braid's digit composition.
+
+```typescript
+const result = interpreter.interpret('Once upon a time');
+const fracticulated = await interpreter.fracticulatize(result);
+
+// Each braid now has a .variants array and .vds score
+fracticulated.braid.forEach(b => {
+  console.log(b.equation, b.vds?.variantCount, b.variants?.length);
+});
+```
+
+VDS is also computed automatically by `interpret()` and available on `result.vds`.
+
 ---
 
 ## API Reference
@@ -126,8 +156,11 @@ const interpreter = new TauTongueInterpreter(config?: TauTongueConfig);
 | `getMicroCrucible(braidFunction)` | `string` | Get a micro-crucible from a single braid function. |
 | `getAntagonist(equation)` | `TauTongueAntagonist` | Extract the antagonist (longest braid) from the symbolic equation. |
 | `analyzeInterference(result)` | `InflectionPoint[]` | Locate inflection points between braid functions and the interference wave. |
-| `getInterferenceWave(result)` | `string` | Calculate the Braid Interference Wave. |
+| `getInterferenceWave(result)` | `number[]` | Calculate the Braid Interference Wave. |
+| `extractArchetypalMatrix(equation)` | `ArchetypalMatrix` | Analyze the archetypal distribution of a symbolic equation. |
 | `extractNarrativePalette(braid)` | `NarrativePalette` | Analyze the distribution of scene functions across the braid. |
+| `calculateVDS(result)` | `VDSResult` | Calculate Variant Density Scores for all braids. |
+| `fracticulatize(result)` | `Promise<TauTongueResult>` | Generate braid variants via cipher-cycle fracticulation. |
 | `getFunctionDescription(func)` | `string` | Get a prose description for a symbolic function string. |
 | `getSymbol(symbol)` | `SymbolDefinition \| undefined` | Look up a symbol definition from the configured symbol map. |
 | `getSymbols()` | `string[]` | Get all symbol keys from the configured symbol map. |
@@ -244,6 +277,9 @@ import type {
   FlattenedScene,
   ArchetypalMatrix,
   ArchetypalEntry,
+  VDSResult,
+  BraidVariantScore,
+  BraidVariant,
   FormatData,
   UnitSpec,
 } from '@astralarkitekt/tau-tongue';
@@ -259,6 +295,7 @@ Live demos at [tools.astralarchitecture.com/tau-tongue](https://tools.astralarch
 |------|-------------|
 | [Interpreter](https://tools.astralarchitecture.com/tau-tongue/demos/interpreter.html) | Full result workbench — digital root, archetype, equation, braid, crucible, narrative. |
 | [Spine Generator](https://tools.astralarchitecture.com/tau-tongue/demos/spine-generator.html) | Recursive `TauSpine` tree visualization from input text. |
+| [TauFracticulate](https://tools.astralarchitecture.com/tau-tongue/demos/TauFracticulate.html) | Fracticulation explorer — VDS scoring, braid variants, cipher-cycle evolution. |
 | [TauSigils](https://tools.astralarchitecture.com/tau-tongue/demos/TauSigils.html) | Ethereal continuous-line sigil drawings from braid structure. |
 | [TauGlyphs](https://tools.astralarchitecture.com/tau-tongue/demos/TauGlyphs.html) | Colored node graphs showing structural braid relationships. |
 | [TauAlchemy](https://tools.astralarchitecture.com/tau-tongue/demos/TauAlchemy.html) | Animated alchemical seal geometry driven by braid data. |
@@ -290,6 +327,7 @@ src/
 demos/
   interpreter.html                  # Full result workbench
   spine-generator.html              # TauSpine tree visualizer
+  TauFracticulate.html              # Fracticulation / VDS explorer
   TauSigils.html                    # Sigil art renderer
   TauGlyphs.html                    # Glyph graph renderer
   TauAlchemy.html                   # Alchemical seal geometry
@@ -297,6 +335,9 @@ demos/
   TauAether.html                    # Norse Runic config demo (v3)
   JungTongue.html                   # Jungian chatbot demo
   jung-tongue-config.js             # Jungian symbolic system config
+simulations/
+  fracticulate.ts                   # VDS distribution simulation (10k epochs)
+  jung-interference-test.ts         # Multi-digit config verification tests
 ```
 
 ---
