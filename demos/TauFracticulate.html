@@ -1,0 +1,615 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Tau-Tongue Fracticulation Map</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: #08081a;
+      color: #e0e0e0;
+      min-height: 100vh;
+      padding: 2rem;
+    }
+
+    .page-header h1 {
+      font-size: 2.5rem;
+      background: linear-gradient(135deg, #a78bfa, #818cf8, #34d399);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      margin-bottom: 0.5rem;
+    }
+    .page-header p { color: #888; font-size: 1.1rem; margin-bottom: 2rem; }
+
+    /* --- Input controls --- */
+    .controls {
+      display: flex; gap: 1rem; margin-bottom: 2rem;
+      max-width: 1600px; margin-left: auto; margin-right: auto;
+    }
+    .controls textarea {
+      flex: 1; min-height: 60px; padding: 1rem;
+      background: #1a1a2e; border: 1px solid #333; border-radius: 8px;
+      color: #e0e0e0; font-size: 1rem; font-family: inherit;
+      outline: none; resize: vertical; transition: border-color 0.2s;
+    }
+    .controls textarea:focus { border-color: #a78bfa; }
+    .controls button {
+      padding: 0.75rem 2rem;
+      background: linear-gradient(135deg, #a78bfa, #34d399);
+      border: none; border-radius: 8px; color: #000;
+      font-weight: 700; font-size: 1rem; cursor: pointer;
+      transition: opacity 0.2s; white-space: nowrap;
+    }
+    .controls button:hover { opacity: 0.85; }
+    .controls button:disabled { opacity: 0.4; cursor: not-allowed; }
+
+    /* --- Two-column layout --- */
+    .container {
+      display: grid; grid-template-columns: 1fr;
+      gap: 2rem; max-width: 1600px; margin: 0 auto;
+    }
+    @media (min-width: 1100px) {
+      .container { grid-template-columns: 3fr 2fr; align-items: start; }
+    }
+
+    /* --- Meta strip --- */
+    .meta-strip {
+      display: flex; gap: 2px; flex-wrap: wrap; margin-bottom: 20px;
+    }
+    .meta-card {
+      background: #10102a; padding: 10px 18px;
+    }
+    .meta-card .label {
+      color: #8888aa; font-size: 11px; letter-spacing: 0.15em; margin-bottom: 4px;
+    }
+    .meta-card .value { font-size: 15px; font-weight: 800; }
+
+    /* --- Spine --- */
+    .spine { display: flex; flex-direction: column; }
+
+    .braid-node {
+      display: flex; align-items: center; gap: 18px;
+      padding: 16px 20px; cursor: pointer;
+      border: 1px solid #2a2a44; border-left: 4px solid #2a2a44;
+      transition: all 0.15s; position: relative;
+    }
+    .braid-node.branchable { background: #14142a; }
+    .braid-node:not(.branchable) { background: #0f0f1c; }
+    .braid-node.selected { background: #1c1c3a; border-color: #ffffff; }
+
+    .braid-index {
+      color: #666688; font-size: 13px; min-width: 24px;
+      text-align: right; font-family: monospace; font-weight: 700;
+    }
+    .braid-symbol {
+      font-size: 36px; min-width: 36px; text-align: center; line-height: 1;
+    }
+    .braid-symbol.dim { color: #666688; }
+    .braid-body { flex: 1; }
+    .braid-eq {
+      color: #ccccee; font-size: 15px; font-family: monospace;
+      margin-bottom: 4px; font-weight: 600;
+    }
+    .braid-arch { color: #8888aa; font-size: 13px; }
+
+    .pressure-col {
+      display: flex; flex-direction: column; align-items: flex-end;
+      gap: 5px; min-width: 60px;
+    }
+    .pressure-score { font-size: 18px; font-weight: 800; font-family: monospace; }
+    .pressure-track { width: 60px; height: 5px; background: #1a1a30; border-radius: 3px; }
+    .pressure-fill { height: 100%; border-radius: 3px; }
+    .pressure-label { color: #555577; font-size: 11px; }
+
+    .variant-badge {
+      position: absolute; top: -10px; right: 14px;
+      color: #000; font-size: 11px; font-weight: 800;
+      border-radius: 12px; padding: 2px 10px;
+      font-family: monospace; letter-spacing: 0.05em;
+    }
+
+    /* --- Spine connector --- */
+    .spine-connector {
+      display: flex; justify-content: flex-start; margin-left: 38px;
+    }
+    .spine-connector .line { width: 2px; }
+    .spine-connector.branching .line { height: 10px; }
+    .spine-connector:not(.branching) .line { height: 16px; background: #2a2a44; }
+
+    /* --- Variant row --- */
+    .variant-row {
+      display: flex; gap: 2px;
+      border-left: 2px dashed transparent;
+      margin-left: 28px; padding-left: 24px;
+      padding-top: 6px; padding-bottom: 6px;
+    }
+    .variant-card {
+      flex: 1; padding: 14px 16px;
+      background: #0c0c1c; cursor: default; transition: all 0.12s;
+    }
+    .variant-card:hover { background: color-mix(in srgb, var(--vc) 16%, #0c0c1c); }
+    .variant-label {
+      font-size: 11px; letter-spacing: 0.15em; margin-bottom: 6px; font-weight: 700;
+    }
+    .variant-symbol { font-size: 28px; margin-bottom: 6px; line-height: 1; }
+    .variant-card:hover .variant-symbol { filter: drop-shadow(0 0 6px var(--vc)); }
+    .variant-eq {
+      color: #aaaacc; font-size: 13px; font-family: monospace;
+      margin-bottom: 5px; font-weight: 600;
+    }
+    .variant-desc { color: #8888aa; font-size: 13px; line-height: 1.5; }
+
+    /* --- Canvas --- */
+    .canvas-stage {
+      background: #0a0a16; border: 1px solid #222; border-radius: 12px;
+      width: 100%; aspect-ratio: 3 / 4; overflow: hidden;
+      box-shadow: inset 0 0 80px rgba(0,0,0,0.6);
+      position: sticky; top: 2rem;
+    }
+    .canvas-stage canvas { width: 100%; height: 100%; object-fit: contain; }
+
+    /* --- Legend --- */
+    .legend {
+      margin-top: 32px; padding-top: 20px; border-top: 1px solid #2a2a44;
+      display: flex; gap: 24px; flex-wrap: wrap; max-width: 1600px; margin-left: auto; margin-right: auto;
+    }
+    .legend-title { color: #8888aa; font-size: 13px; margin-right: 8px; align-self: center; }
+    .legend-item { display: flex; align-items: center; gap: 8px; font-size: 13px; color: #aaaacc; }
+    .legend-swatch { width: 12px; height: 12px; border-radius: 2px; flex-shrink: 0; }
+
+    /* --- Loading / Error --- */
+    .status-msg {
+      text-align: center; padding: 3rem; font-size: 1.1rem; color: #666688;
+    }
+    .status-msg.error { color: #f87171; }
+    .status-msg.loading { color: #a78bfa; }
+
+    .empty-hint {
+      color: #444466; font-size: 14px; text-align: center; padding: 4rem 2rem;
+      border: 1px dashed #2a2a44; border-radius: 8px;
+    }
+  </style>
+</head>
+<body>
+  <div style="max-width:1600px;margin:0 auto;">
+    <div class="page-header">
+      <h1>Fracticulation Map</h1>
+      <p>Symbolic branch exploration — variant pressure scoring &amp; cipher-cycled divergence</p>
+    </div>
+
+    <div class="controls">
+      <textarea id="spark-input" maxlength="512"
+        placeholder="Type a spark phrase to fracticulate (max 512 chars)..."></textarea>
+      <button id="go-btn">Fracticulate</button>
+    </div>
+  </div>
+
+  <div id="result-area">
+    <div class="empty-hint" id="empty-hint">
+      Enter a spark and press <strong>Fracticulate</strong> to see the branch map.
+    </div>
+  </div>
+
+  <div class="legend" id="legend" style="display:none;">
+    <div class="legend-title">PRESSURE TIERS:</div>
+    <div class="legend-item"><div class="legend-swatch" style="background:#fbbf24"></div>&ge; 8.0 &middot; 3 variants</div>
+    <div class="legend-item"><div class="legend-swatch" style="background:#a78bfa"></div>&ge; 5.0 &middot; 2 variants</div>
+    <div class="legend-item"><div class="legend-swatch" style="background:#34d399"></div>&ge; 2.0 &middot; 1 variant</div>
+    <div class="legend-item"><div class="legend-swatch" style="background:#444466"></div>below threshold</div>
+  </div>
+
+  <script type="module">
+    import { TauTongueInterpreter, calculateDigitalRoot } from '../dist/index.js';
+
+    // ---- Constants ----
+    const ARCHETYPES = {
+      1:'Dreamweaver',2:'Recursivist',3:'Architect',4:'Oracle',
+      5:'Catalyst',6:'Empath',7:'Archivist',8:'Mechanist',9:'Alchemist',
+      11:'Weaver of Fields', 22:'Mask Maker'
+    };
+    const VARIANT_COLORS = ['#a78bfa','#34d399','#fbbf24'];
+
+    function pressureColor(p) {
+      return p >= 0.80 ? '#fbbf24' : p >= 0.50 ? '#a78bfa' : p >= 0.20 ? '#34d399' : '#444466';
+    }
+
+    function escapeHtml(s) {
+      const d = document.createElement('div');
+      d.textContent = s;
+      return d.innerHTML;
+    }
+
+    // ---- DOM refs ----
+    const sparkInput   = document.getElementById('spark-input');
+    const goBtn        = document.getElementById('go-btn');
+    const resultArea   = document.getElementById('result-area');
+    const emptyHint    = document.getElementById('empty-hint');
+    const legend       = document.getElementById('legend');
+
+    const interpreter = new TauTongueInterpreter();
+
+    // ---- Event binding ----
+    goBtn.addEventListener('click', run);
+    sparkInput.addEventListener('keydown', e => {
+      if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); run(); }
+    });
+
+    async function run() {
+      const spark = sparkInput.value.trim();
+      if (!spark) return;
+
+      goBtn.disabled = true;
+      goBtn.textContent = 'Fracticulating…';
+      resultArea.innerHTML = '<div class="status-msg loading">Interpreting &amp; fracticulating…</div>';
+      legend.style.display = 'none';
+
+      try {
+        await new Promise(r => setTimeout(r, 30)); // let UI paint
+        const raw = interpreter.interpret(spark);
+        const result = await interpreter.fracticulatize(raw);
+        render(result);
+      } catch (err) {
+        resultArea.innerHTML = `<div class="status-msg error">Error: ${escapeHtml(err.message)}</div>`;
+        console.error(err);
+      } finally {
+        goBtn.disabled = false;
+        goBtn.textContent = 'Fracticulate';
+      }
+    }
+
+    // ---- Build display data ----
+    function buildBraidData(result) {
+      return result.braid.map((b, i) => {
+        const symbol = b.equation.slice(0, 1);
+        const digits = b.equation.replace(/[^1-9]/g, '');
+        const dr = digits.length ? calculateDigitalRoot(digits) : null;
+        const vds = result.vds.scores[i] || { pressureDensity: 0, canBranch: false, variantCount: 0 };
+        const variants = (b.variants || []).map(v => ({
+          ...v,
+          symbol: v.equation.slice(0, 1),
+        }));
+        return {
+          index: i,
+          symbol,
+          equation: b.equation,
+          description: b.description,
+          archetype: dr,
+          pressure: vds.pressureDensity,
+          canBranch: vds.canBranch,
+          variants,
+        };
+      });
+    }
+
+    // ---- Render everything ----
+    function render(result) {
+      const braids = buildBraidData(result);
+      const branchCount = braids.filter(b => b.canBranch).length;
+
+      // Crucible symbol
+      const crucibleSymbol = result.crucible.slice(0, 1);
+
+      resultArea.innerHTML = '';
+      legend.style.display = 'flex';
+
+      // -- Meta strip --
+      const metaStrip = el('div', 'meta-strip');
+      const metas = [
+        ['CRUCIBLE',       crucibleSymbol + '(' + result.digitalSum + ')', '#a78bfa'],
+        ['RESONANCE',      result.resonance,                               '#34d399'],
+        ['ARCHETYPE',      result.archetype,                               '#60a5fa'],
+        ['ANTAGONIST',     result.antagonist.braid.slice(0, 1),            '#fbbf24'],
+        ['BRANCH POINTS',  branchCount + ' of ' + braids.length,           '#f472b6'],
+        ['PEAK PRESSURE',  (result.vds.peakPressure * 10).toFixed(1),      '#fb923c'],
+      ];
+      metas.forEach(([label, value, color]) => {
+        const card = el('div', 'meta-card');
+        card.style.borderTop = '3px solid ' + color;
+        card.innerHTML = `<div class="label">${label}</div><div class="value" style="color:${color}">${escapeHtml(value)}</div>`;
+        metaStrip.appendChild(card);
+      });
+
+      // -- Layout --
+      const container = el('div', 'container');
+
+      // Left: spine
+      const leftPanel = el('div');
+      leftPanel.appendChild(metaStrip);
+
+      // Spark display
+      const sparkLabel = el('div');
+      sparkLabel.style.cssText = 'margin-bottom:16px;';
+      sparkLabel.innerHTML = `<span style="color:#a78bfa;font-size:11px;letter-spacing:0.3em;font-weight:700;">TAU-TONGUE · FRACTICULATION MAP</span>
+        <div style="font-size:22px;font-weight:800;color:#fff;line-height:1.3;margin-top:8px;">${escapeHtml(result.input)}</div>`;
+      leftPanel.appendChild(sparkLabel);
+
+      const spine = el('div', 'spine');
+      let selectedIndex = null;
+
+      braids.forEach((b, i) => {
+        const node = buildBraidNode(b, () => {
+          if (selectedIndex === b.index) {
+            selectedIndex = null;
+          } else {
+            selectedIndex = b.index;
+          }
+          spine.querySelectorAll('.braid-node').forEach((n, ni) => {
+            n.classList.toggle('selected', ni === selectedIndex);
+          });
+        });
+        spine.appendChild(node);
+
+        if (b.canBranch && b.variants.length) {
+          spine.appendChild(buildVariantRow(b.variants, b.pressure));
+        }
+
+        if (i < braids.length - 1) {
+          spine.appendChild(buildConnector(b.canBranch, b.pressure));
+        }
+      });
+
+      leftPanel.appendChild(spine);
+      container.appendChild(leftPanel);
+
+      // Right: canvas
+      const rightPanel = el('div');
+      const stage = el('div', 'canvas-stage');
+      const canvas = document.createElement('canvas');
+      canvas.width = 1200;
+      canvas.height = 1600;
+      stage.appendChild(canvas);
+      rightPanel.appendChild(stage);
+      container.appendChild(rightPanel);
+
+      resultArea.appendChild(container);
+
+      drawBranchTree(canvas, braids, result);
+    }
+
+    // ---- Braid node ----
+    function buildBraidNode(b, onClick) {
+      const pc = pressureColor(b.pressure);
+      const node = el('div', 'braid-node' + (b.canBranch ? ' branchable' : ''));
+      if (b.canBranch) {
+        node.style.borderColor = pc;
+        node.style.borderLeftColor = pc;
+        node.style.boxShadow = '0 0 20px ' + pc + '33';
+      }
+      node.addEventListener('click', onClick);
+
+      // Index
+      const idx = el('div', 'braid-index');
+      idx.textContent = String(b.index).padStart(2, '0');
+
+      // Symbol
+      const sym = el('div', 'braid-symbol' + (b.canBranch ? '' : ' dim'));
+      sym.textContent = b.symbol;
+      if (b.canBranch) {
+        sym.style.color = pc;
+        sym.style.filter = 'drop-shadow(0 0 8px ' + pc + ')';
+      }
+
+      // Body
+      const body = el('div', 'braid-body');
+      body.innerHTML = `<div class="braid-eq">${escapeHtml(b.equation)}</div>
+        <div class="braid-arch">${b.archetype != null ? ARCHETYPES[b.archetype] || 'Unknown' : ''}</div>`;
+
+      // Pressure
+      const pcol = el('div', 'pressure-col');
+      if (b.pressure > 0) {
+        pcol.innerHTML = `<div class="pressure-score" style="color:${pc}">${(b.pressure * 10).toFixed(1)}</div>
+          <div class="pressure-track"><div class="pressure-fill" style="width:${Math.min(b.pressure, 1) * 100}%;background:${pc}"></div></div>
+          <div class="pressure-label">pressure</div>`;
+      } else {
+        pcol.innerHTML = '<div style="color:#333355;font-size:12px">—</div>';
+      }
+
+      node.append(idx, sym, body, pcol);
+
+      // Variant badge
+      if (b.canBranch) {
+        const badge = el('div', 'variant-badge');
+        badge.style.background = pc;
+        badge.textContent = b.variants.length + ' variant' + (b.variants.length > 1 ? 's' : '');
+        node.appendChild(badge);
+      }
+
+      return node;
+    }
+
+    // ---- Variant row ----
+    function buildVariantRow(variants, braidPressure) {
+      const pc = pressureColor(braidPressure);
+      const row = el('div', 'variant-row');
+      row.style.borderLeftColor = pc + '66';
+
+      variants.forEach((v, vi) => {
+        const c = VARIANT_COLORS[vi] || '#aaaacc';
+        const card = el('div', 'variant-card');
+        card.style.setProperty('--vc', c);
+        card.style.borderColor = c + '44';
+        card.style.borderTop = '3px solid ' + c;
+
+        card.innerHTML = `<div class="variant-label" style="color:${c}">VARIANT ${v.variantIndex}</div>
+          <div class="variant-symbol" style="color:${c}">${v.symbol}</div>
+          <div class="variant-eq">${escapeHtml(v.equation)}</div>
+          <div class="variant-desc">${escapeHtml(v.description)}</div>`;
+
+        row.appendChild(card);
+      });
+
+      return row;
+    }
+
+    // ---- Spine connector ----
+    function buildConnector(branching, pressure) {
+      const pc = pressureColor(pressure);
+      const wrap = el('div', 'spine-connector' + (branching ? ' branching' : ''));
+      const line = el('div', 'line');
+      if (branching) line.style.background = pc + 'cc';
+      wrap.appendChild(line);
+      return wrap;
+    }
+
+    // ---- Canvas: branch tree ----
+    function drawBranchTree(canvas, braids, result) {
+      const ctx = canvas.getContext('2d');
+      const W = canvas.width;
+      const H = canvas.height;
+
+      ctx.fillStyle = '#0a0a16';
+      ctx.fillRect(0, 0, W, H);
+
+      if (!braids.length) return;
+
+      const padTop = 80, padBot = 60, padLeft = 160, padRight = 160;
+      const trunkX = padLeft;
+      const usableH = H - padTop - padBot;
+      const step = usableH / Math.max(braids.length - 1, 1);
+
+      // Title
+      ctx.font = '700 22px monospace';
+      ctx.fillStyle = '#a78bfa';
+      ctx.textAlign = 'left';
+      ctx.fillText('BRANCH TOPOLOGY', padLeft, 40);
+
+      ctx.font = '400 16px monospace';
+      ctx.fillStyle = '#555577';
+      ctx.fillText(braids.filter(b => b.canBranch).length + ' branch points · '
+        + braids.reduce((s, b) => s + b.variants.length, 0) + ' total variants', padLeft, 62);
+
+      // Draw trunk
+      const firstY = padTop;
+      const lastY = padTop + step * (braids.length - 1);
+
+      ctx.strokeStyle = '#2a2a44';
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.moveTo(trunkX, firstY);
+      ctx.lineTo(trunkX, lastY);
+      ctx.stroke();
+
+      // Draw nodes + branches
+      braids.forEach((b, i) => {
+        const y = padTop + step * i;
+        const pc = pressureColor(b.pressure);
+        const r = b.canBranch ? 10 : 5;
+
+        // Trunk segment highlight for branchable
+        if (b.canBranch && i > 0) {
+          ctx.strokeStyle = pc + '66';
+          ctx.lineWidth = 3;
+          ctx.beginPath();
+          ctx.moveTo(trunkX, y - step);
+          ctx.lineTo(trunkX, y);
+          ctx.stroke();
+        }
+
+        // Node circle
+        ctx.beginPath();
+        ctx.arc(trunkX, y, r, 0, Math.PI * 2);
+        if (b.canBranch) {
+          ctx.fillStyle = pc;
+          ctx.shadowColor = pc;
+          ctx.shadowBlur = 16;
+        } else {
+          ctx.fillStyle = '#3a3a55';
+          ctx.shadowColor = 'transparent';
+          ctx.shadowBlur = 0;
+        }
+        ctx.fill();
+        ctx.shadowBlur = 0;
+
+        // Symbol on trunk
+        ctx.font = '700 24px serif';
+        ctx.fillStyle = b.canBranch ? pc : '#555577';
+        ctx.textAlign = 'right';
+        ctx.fillText(b.symbol, trunkX - 22, y + 8);
+
+        // Index
+        ctx.font = '600 13px monospace';
+        ctx.fillStyle = '#444466';
+        ctx.textAlign = 'right';
+        ctx.fillText(String(i).padStart(2, '0'), trunkX - 52, y + 5);
+
+        // Draw variant branches
+        if (b.canBranch && b.variants.length) {
+          const branchLen = 120 + b.variants.length * 30;
+
+          b.variants.forEach((v, vi) => {
+            const vc = VARIANT_COLORS[vi] || '#aaaacc';
+            const angle = -0.35 + vi * 0.35; // fan out
+            const endX = trunkX + Math.cos(angle) * branchLen;
+            const endY = y + Math.sin(angle) * branchLen * 0.5 + (vi - 1) * 25;
+
+            // Branch line
+            ctx.strokeStyle = vc + '88';
+            ctx.lineWidth = 2;
+            ctx.setLineDash([6, 4]);
+            ctx.beginPath();
+            ctx.moveTo(trunkX + r, y);
+
+            // Slight curve
+            const cpX = trunkX + (endX - trunkX) * 0.5;
+            const cpY = y + (endY - y) * 0.3;
+            ctx.quadraticCurveTo(cpX, cpY, endX, endY);
+            ctx.stroke();
+            ctx.setLineDash([]);
+
+            // Variant node
+            ctx.beginPath();
+            ctx.arc(endX, endY, 7, 0, Math.PI * 2);
+            ctx.fillStyle = vc;
+            ctx.shadowColor = vc;
+            ctx.shadowBlur = 12;
+            ctx.fill();
+            ctx.shadowBlur = 0;
+
+            // Variant symbol
+            ctx.font = '700 22px serif';
+            ctx.fillStyle = vc;
+            ctx.textAlign = 'left';
+            ctx.fillText(v.symbol, endX + 14, endY + 7);
+
+            // Variant equation
+            ctx.font = '500 12px monospace';
+            ctx.fillStyle = vc + 'aa';
+            ctx.fillText(v.equation, endX + 14, endY + 24);
+
+            // Variant label
+            ctx.font = '700 10px monospace';
+            ctx.fillStyle = vc + '88';
+            ctx.fillText('V' + v.variantIndex, endX + 14, endY - 10);
+          });
+        }
+      });
+
+      // Pressure bar along left edge
+      const barX = 30, barW = 8;
+      braids.forEach((b, i) => {
+        const y = padTop + step * i;
+        const h = Math.max(step - 4, 4);
+        const pc = pressureColor(b.pressure);
+
+        ctx.fillStyle = '#1a1a30';
+        ctx.fillRect(barX, y - 2, barW, h);
+
+        if (b.pressure > 0) {
+          ctx.fillStyle = pc + '88';
+          ctx.fillRect(barX, y - 2 + h * (1 - Math.min(b.pressure, 1)), barW, h * Math.min(b.pressure, 1));
+        }
+      });
+    }
+
+    // ---- Helpers ----
+    function el(tag, cls) {
+      const e = document.createElement(tag);
+      if (cls) e.className = cls;
+      return e;
+    }
+  </script>
+</body>
+</html>

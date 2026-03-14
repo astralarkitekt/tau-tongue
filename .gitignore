@@ -153,3 +153,5 @@ logs
 .npmrc
 .yarnrc
 .pnpmrc
+
+simulations/*
