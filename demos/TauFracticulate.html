@@ -12,22 +12,34 @@
       background: #08081a;
       color: #e0e0e0;
       min-height: 100vh;
-      padding: 2rem;
+      padding: 1rem;
+    }
+    @media (min-width: 768px) {
+      body { padding: 2rem; }
     }
 
     .page-header h1 {
-      font-size: 2.5rem;
+      font-size: 1.6rem;
       background: linear-gradient(135deg, #a78bfa, #818cf8, #34d399);
       -webkit-background-clip: text;
       -webkit-text-fill-color: transparent;
       margin-bottom: 0.5rem;
     }
-    .page-header p { color: #888; font-size: 1.1rem; margin-bottom: 2rem; }
+    @media (min-width: 768px) {
+      .page-header h1 { font-size: 2.5rem; }
+    }
+    .page-header p { color: #888; font-size: 1rem; margin-bottom: 1.5rem; }
+    @media (min-width: 768px) {
+      .page-header p { font-size: 1.1rem; margin-bottom: 2rem; }
+    }
 
     /* --- Input controls --- */
     .controls {
-      display: flex; gap: 1rem; margin-bottom: 2rem;
+      display: flex; flex-direction: column; gap: 0.75rem; margin-bottom: 1.5rem;
       max-width: 1600px; margin-left: auto; margin-right: auto;
+    }
+    @media (min-width: 600px) {
+      .controls { flex-direction: row; gap: 1rem; margin-bottom: 2rem; }
     }
     .controls textarea {
       flex: 1; min-height: 60px; padding: 1rem;
@@ -60,21 +72,30 @@
       display: flex; gap: 2px; flex-wrap: wrap; margin-bottom: 20px;
     }
     .meta-card {
-      background: #10102a; padding: 10px 18px;
+      background: #10102a; padding: 8px 12px; flex: 1 1 auto; min-width: 0;
+    }
+    @media (min-width: 600px) {
+      .meta-card { padding: 10px 18px; }
     }
     .meta-card .label {
       color: #8888aa; font-size: 11px; letter-spacing: 0.15em; margin-bottom: 4px;
     }
-    .meta-card .value { font-size: 15px; font-weight: 800; }
+    .meta-card .value { font-size: 13px; font-weight: 800; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    @media (min-width: 600px) {
+      .meta-card .value { font-size: 15px; }
+    }
 
     /* --- Spine --- */
     .spine { display: flex; flex-direction: column; }
 
     .braid-node {
-      display: flex; align-items: center; gap: 18px;
-      padding: 16px 20px; cursor: pointer;
+      display: flex; align-items: center; gap: 10px;
+      padding: 12px 10px; cursor: pointer;
       border: 1px solid #2a2a44; border-left: 4px solid #2a2a44;
       transition: all 0.15s; position: relative;
+    }
+    @media (min-width: 600px) {
+      .braid-node { gap: 18px; padding: 16px 20px; }
     }
     .braid-node.branchable { background: #14142a; }
     .braid-node:not(.branchable) { background: #0f0f1c; }
@@ -83,24 +104,41 @@
     .braid-index {
       color: #666688; font-size: 13px; min-width: 24px;
       text-align: right; font-family: monospace; font-weight: 700;
+      display: none;
+    }
+    @media (min-width: 600px) {
+      .braid-index { display: block; }
     }
     .braid-symbol {
-      font-size: 36px; min-width: 36px; text-align: center; line-height: 1;
+      font-size: 24px; min-width: 28px; text-align: center; line-height: 1;
+    }
+    @media (min-width: 600px) {
+      .braid-symbol { font-size: 36px; min-width: 36px; }
     }
     .braid-symbol.dim { color: #666688; }
     .braid-body { flex: 1; }
     .braid-eq {
-      color: #ccccee; font-size: 15px; font-family: monospace;
+      color: #ccccee; font-size: 13px; font-family: monospace;
       margin-bottom: 4px; font-weight: 600;
+      word-break: break-all;
+    }
+    @media (min-width: 600px) {
+      .braid-eq { font-size: 15px; word-break: normal; }
     }
     .braid-arch { color: #8888aa; font-size: 13px; }
 
     .pressure-col {
       display: flex; flex-direction: column; align-items: flex-end;
-      gap: 5px; min-width: 60px;
+      gap: 5px; min-width: 44px;
+    }
+    @media (min-width: 600px) {
+      .pressure-col { min-width: 60px; }
     }
     .pressure-score { font-size: 18px; font-weight: 800; font-family: monospace; }
-    .pressure-track { width: 60px; height: 5px; background: #1a1a30; border-radius: 3px; }
+    .pressure-track { width: 44px; height: 5px; background: #1a1a30; border-radius: 3px; }
+    @media (min-width: 600px) {
+      .pressure-track { width: 60px; }
+    }
     .pressure-fill { height: 100%; border-radius: 3px; }
     .pressure-label { color: #555577; font-size: 11px; }
 
@@ -113,7 +151,10 @@
 
     /* --- Spine connector --- */
     .spine-connector {
-      display: flex; justify-content: flex-start; margin-left: 38px;
+      display: flex; justify-content: flex-start; margin-left: 24px;
+    }
+    @media (min-width: 600px) {
+      .spine-connector { margin-left: 38px; }
     }
     .spine-connector .line { width: 2px; }
     .spine-connector.branching .line { height: 10px; }
@@ -121,13 +162,16 @@
 
     /* --- Variant row --- */
     .variant-row {
-      display: flex; gap: 2px;
+      display: flex; flex-direction: column; gap: 2px;
       border-left: 2px dashed transparent;
-      margin-left: 28px; padding-left: 24px;
+      margin-left: 14px; padding-left: 14px;
       padding-top: 6px; padding-bottom: 6px;
     }
+    @media (min-width: 600px) {
+      .variant-row { flex-direction: row; margin-left: 28px; padding-left: 24px; }
+    }
     .variant-card {
-      flex: 1; padding: 14px 16px;
+      flex: 1; padding: 12px 14px;
       background: #0c0c1c; cursor: default; transition: all 0.12s;
     }
     .variant-card:hover { background: color-mix(in srgb, var(--vc) 16%, #0c0c1c); }
@@ -147,14 +191,16 @@
       background: #0a0a16; border: 1px solid #222; border-radius: 12px;
       width: 100%; aspect-ratio: 3 / 4; overflow: hidden;
       box-shadow: inset 0 0 80px rgba(0,0,0,0.6);
-      position: sticky; top: 2rem;
+    }
+    @media (min-width: 1100px) {
+      .canvas-stage { position: sticky; top: 2rem; }
     }
     .canvas-stage canvas { width: 100%; height: 100%; object-fit: contain; }
 
     /* --- Legend --- */
     .legend {
       margin-top: 32px; padding-top: 20px; border-top: 1px solid #2a2a44;
-      display: flex; gap: 24px; flex-wrap: wrap; max-width: 1600px; margin-left: auto; margin-right: auto;
+      display: flex; gap: 12px 24px; flex-wrap: wrap; max-width: 1600px; margin-left: auto; margin-right: auto;
     }
     .legend-title { color: #8888aa; font-size: 13px; margin-right: 8px; align-self: center; }
     .legend-item { display: flex; align-items: center; gap: 8px; font-size: 13px; color: #aaaacc; }

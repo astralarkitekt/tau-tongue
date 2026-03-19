@@ -12,17 +12,26 @@
       background: #08081a;
       color: #e0e0e0;
       min-height: 100vh;
-      padding: 2rem;
+      padding: 1rem;
+    }
+    @media (min-width: 768px) {
+      body { padding: 2rem; }
     }
 
     .page-header h1 {
-      font-size: 2.5rem;
+      font-size: 1.6rem;
       background: linear-gradient(135deg, #a78bfa, #818cf8, #34d399);
       -webkit-background-clip: text;
       -webkit-text-fill-color: transparent;
       margin-bottom: 0.5rem;
     }
-    .page-header p { color: #888; font-size: 1.1rem; margin-bottom: 2rem; }
+    @media (min-width: 768px) {
+      .page-header h1 { font-size: 2.5rem; }
+    }
+    .page-header p { color: #888; font-size: 1rem; margin-bottom: 1.5rem; }
+    @media (min-width: 768px) {
+      .page-header p { font-size: 1.1rem; margin-bottom: 2rem; }
+    }
 
     .layout {
       display: grid; grid-template-columns: 1fr;
@@ -44,8 +53,11 @@
 
     /* --- Helper text --- */
     .helper {
-      color: #666688; font-size: 13px; line-height: 1.6; margin-bottom: 1rem;
+      color: #666688; font-size: 14px; line-height: 1.6; margin-bottom: 1rem;
       border-left: 3px solid #2a2a44; padding-left: 12px;
+    }
+    @media (min-width: 768px) {
+      .helper { font-size: 14px; }
     }
     .helper strong { color: #8888aa; }
     .helper code {
@@ -82,52 +94,76 @@
       color: #555577; font-size: 12px; font-style: italic;
     }
 
-    /* --- Archetype table --- */
-    .arch-table {
-      width: 100%; border-collapse: collapse; margin-bottom: 1.5rem;
+    /* --- Archetype cards --- */
+    .arch-cards {
+      display: flex; flex-direction: column; gap: 12px; margin-bottom: 1.5rem;
     }
-    .arch-table th {
-      text-align: left; font-size: 11px; letter-spacing: 0.15em; color: #666688;
-      padding: 6px 8px; border-bottom: 1px solid #2a2a44; font-weight: 600;
+    .arch-card {
+      background: #0c0c1e; border: 1px solid #2a2a44; border-radius: 8px;
+      padding: 16px; position: relative;
     }
-    .arch-table td {
-      padding: 4px 8px; border-bottom: 1px solid #1a1a30; vertical-align: middle;
+    .arch-card-header {
+      display: flex; align-items: center; gap: 12px;
+      margin-bottom: 14px; padding-bottom: 12px; border-bottom: 1px solid #1a1a30;
     }
-    .arch-table .root-num {
+    .arch-card-root {
       color: #a78bfa; font-family: monospace; font-weight: 700;
-      font-size: 15px; width: 40px; text-align: center;
+      font-size: 22px; min-width: 36px; text-align: center;
     }
-    .arch-table .typal-badge {
+    .arch-card-root .typal-input {
+      width: 56px; text-align: center; font-family: monospace; font-weight: 700;
+      font-size: 18px; color: #a78bfa;
+      background: #1a1a2e; border: 1px solid #252540; border-radius: 4px;
+      padding: 4px 6px; outline: none;
+    }
+    .arch-card-root .typal-input:focus { border-color: #a78bfa; }
+    .typal-badge {
       display: inline-block; font-size: 10px; font-weight: 700;
       background: #a78bfa22; color: #a78bfa; border: 1px solid #a78bfa44;
-      border-radius: 4px; padding: 1px 6px; margin-left: 4px;
+      border-radius: 4px; padding: 1px 6px; margin-left: 6px;
       letter-spacing: 0.1em;
     }
-    .arch-table input[type="text"],
-    .arch-table select {
-      width: 100%; padding: 5px 8px;
-      background: #1a1a2e; border: 1px solid #252540; border-radius: 4px;
-      color: #e0e0e0; font-size: 13px; font-family: inherit; outline: none;
+    .arch-card-name {
+      flex: 1; font-size: 16px; font-weight: 700; color: #ccccee;
+    }
+
+    .arch-card-fields {
+      display: grid; grid-template-columns: 1fr;
+      gap: 12px;
+    }
+    @media (min-width: 520px) {
+      .arch-card-fields { grid-template-columns: 1fr 1fr; }
+    }
+
+    .field-group { display: flex; flex-direction: column; gap: 5px; }
+    .field-group.full-width { grid-column: 1 / -1; }
+    .field-label {
+      font-size: 12px; letter-spacing: 0.1em; color: #666688;
+      font-weight: 600; text-transform: uppercase;
+    }
+    .field-input,
+    .field-select {
+      width: 100%; padding: 10px 12px;
+      background: #1a1a2e; border: 1px solid #252540; border-radius: 6px;
+      color: #e0e0e0; font-size: 15px; font-family: inherit; outline: none;
       transition: border-color 0.15s;
     }
-    .arch-table input[type="text"]:focus,
-    .arch-table select:focus { border-color: #a78bfa; }
-    .arch-table input.typal-input {
-      width: 56px; text-align: center; font-family: monospace; font-weight: 700;
-      color: #a78bfa;
+    .field-input:focus,
+    .field-select:focus { border-color: #a78bfa; }
+    .field-input::placeholder { color: #444466; }
+    .field-textarea {
+      width: 100%; padding: 10px 12px; min-height: 60px; resize: vertical;
+      background: #1a1a2e; border: 1px solid #252540; border-radius: 6px;
+      color: #e0e0e0; font-size: 14px; font-family: inherit; outline: none;
+      transition: border-color 0.15s; line-height: 1.5;
     }
-    .arch-table textarea {
-      width: 100%; padding: 5px 8px; min-height: 38px; resize: vertical;
-      background: #1a1a2e; border: 1px solid #252540; border-radius: 4px;
-      color: #e0e0e0; font-size: 12px; font-family: inherit; outline: none;
-      transition: border-color 0.15s; line-height: 1.4;
-    }
-    .arch-table textarea:focus { border-color: #a78bfa; }
-    .arch-table select {
+    .field-textarea:focus { border-color: #a78bfa; }
+    .field-textarea::placeholder { color: #444466; }
+    .field-select {
       appearance: none; cursor: pointer;
       background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%23666688'/%3E%3C/svg%3E");
-      background-repeat: no-repeat; background-position: right 8px center;
-      padding-right: 24px;
+      background-repeat: no-repeat; background-position: right 12px center;
+      padding-right: 32px;
     }
 
     /* --- Section dividers --- */
@@ -145,12 +181,15 @@
     }
     .output-wrap {
       background: #0a0a16; border: 1px solid #222; border-radius: 8px;
-      padding: 1rem; max-height: 80vh; overflow: auto;
+      padding: 1rem; max-height: calc(100vh - 18rem); overflow: auto;
     }
     .output-wrap pre {
       font-family: 'Consolas', 'Fira Code', monospace;
-      font-size: 13px; line-height: 1.6; color: #c8c8e0;
+      font-size: 12px; line-height: 1.6; color: #c8c8e0;
       white-space: pre; tab-size: 2;
+    }
+    @media (min-width: 768px) {
+      .output-wrap pre { font-size: 13px; }
     }
     .output-wrap .kw { color: #c792ea; }
     .output-wrap .str { color: #c3e88d; }
@@ -165,9 +204,9 @@
       display: flex; gap: 0.75rem; margin-top: 1rem; flex-wrap: wrap;
     }
     .btn {
-      padding: 0.6rem 1.5rem;
+      padding: 0.75rem 1.5rem;
       border: none; border-radius: 6px; font-weight: 700;
-      font-size: 13px; cursor: pointer; transition: opacity 0.2s;
+      font-size: 15px; cursor: pointer; transition: opacity 0.2s;
       letter-spacing: 0.03em;
     }
     .btn:hover { opacity: 0.85; }
@@ -182,19 +221,29 @@
 
     /* --- Toast --- */
     .toast {
-      position: fixed; bottom: 2rem; right: 2rem;
+      position: fixed; bottom: 1rem; left: 1rem; right: 1rem;
       background: #34d399; color: #000; font-weight: 700;
       padding: 0.75rem 1.5rem; border-radius: 8px;
-      font-size: 14px; opacity: 0; transform: translateY(10px);
+      font-size: 15px; opacity: 0; transform: translateY(10px);
       transition: all 0.3s; pointer-events: none; z-index: 999;
+      text-align: center;
+    }
+    @media (min-width: 768px) {
+      .toast { left: auto; right: 2rem; bottom: 2rem; }
     }
     .toast.show { opacity: 1; transform: translateY(0); }
 
-    /* --- Responsive tighten --- */
-    @media (max-width: 700px) {
-      body { padding: 1rem; }
-      .page-header h1 { font-size: 1.8rem; }
-      .arch-table th, .arch-table td { padding: 3px 4px; }
+    /* --- Output panel: unstick on mobile --- */
+    @media (max-width: 1199px) {
+      .output-panel { position: static !important; }
+    }
+
+    /* --- Small screen tweaks --- */
+    @media (max-width: 520px) {
+      .panel { padding: 1rem; }
+      .helper { font-size: 14px; }
+      .system-row { flex-direction: column; gap: 0.5rem; }
+      .count-row { flex-direction: column; align-items: flex-start; gap: 0.5rem; }
     }
   </style>
 </head>
@@ -261,7 +310,7 @@
     </div>
 
     <!-- RIGHT: Output -->
-    <div>
+    <div style="align-self:stretch;">
       <div class="panel output-panel">
         <div class="panel-title">Generated TypeScript Config</div>
         <div class="helper">
@@ -352,32 +401,22 @@
       }
     }
 
-    // ---- Render table ----
+    // ---- Render cards ----
     function renderTable() {
-      const table = document.createElement('table');
-      table.className = 'arch-table';
-
-      // Header
-      const thead = document.createElement('thead');
-      thead.innerHTML = `<tr>
-        <th>ROOT</th>
-        <th>ARCHETYPE NAME</th>
-        <th>DESCRIPTION</th>
-        <th>RESONANCE</th>
-        <th>RESONANCE DESC</th>
-        <th>SCENE FUNC</th>
-      </tr>`;
-      table.appendChild(thead);
-
-      const tbody = document.createElement('tbody');
+      const container = document.createElement('div');
+      container.className = 'arch-cards';
 
       rows.forEach((row, i) => {
-        const tr = document.createElement('tr');
         const isTypal = row.root >= 10;
+        const card = document.createElement('div');
+        card.className = 'arch-card';
 
-        // Root cell
-        const rootTd = document.createElement('td');
-        rootTd.className = 'root-num';
+        // Header: root number + name preview
+        const header = document.createElement('div');
+        header.className = 'arch-card-header';
+
+        const rootEl = document.createElement('div');
+        rootEl.className = 'arch-card-root';
         if (isTypal) {
           const inp = document.createElement('input');
           inp.type = 'text';
@@ -391,80 +430,113 @@
               generateOutput();
             }
           });
-          rootTd.appendChild(inp);
+          rootEl.appendChild(inp);
           const badge = document.createElement('span');
           badge.className = 'typal-badge';
           badge.textContent = 'TYPAL';
-          rootTd.appendChild(badge);
+          rootEl.appendChild(badge);
         } else {
-          rootTd.textContent = row.root;
+          rootEl.textContent = row.root;
         }
-        tr.appendChild(rootTd);
+        header.appendChild(rootEl);
 
-        // Name
-        tr.appendChild(makeInputTd(row.name, 'e.g. The Hero', v => {
-          rows[i].name = v; generateOutput();
-        }));
+        const namePreview = document.createElement('div');
+        namePreview.className = 'arch-card-name';
+        namePreview.textContent = row.name || 'Archetype ' + (isTypal ? row.typal : row.root);
+        header.appendChild(namePreview);
+        card.appendChild(header);
 
-        // Description
-        tr.appendChild(makeTextareaTd(row.desc, 'Brief prose description…', v => {
-          rows[i].desc = v; generateOutput();
+        // Fields: 2-col grid
+        const fields = document.createElement('div');
+        fields.className = 'arch-card-fields';
+
+        // Archetype Name
+        fields.appendChild(makeFieldGroup('Archetype Name', 'input', row.name, 'e.g. The Hero', v => {
+          rows[i].name = v;
+          namePreview.textContent = v || 'Archetype ' + (isTypal ? row.typal : row.root);
+          generateOutput();
         }));
 
         // Resonance
-        tr.appendChild(makeInputTd(row.resonance, 'e.g. QUEST', v => {
+        fields.appendChild(makeFieldGroup('Resonance', 'input', row.resonance, 'e.g. QUEST', v => {
           rows[i].resonance = v; generateOutput();
         }));
 
-        // Resonance description
-        tr.appendChild(makeTextareaTd(row.resoDesc, 'What this resonance means…', v => {
+        // Description (full width)
+        fields.appendChild(makeFieldGroup('Archetype Description', 'textarea', row.desc, 'Brief prose description…', v => {
+          rows[i].desc = v; generateOutput();
+        }, true));
+
+        // Resonance description (full width)
+        fields.appendChild(makeFieldGroup('Resonance Description', 'textarea', row.resoDesc, 'What this resonance means…', v => {
           rows[i].resoDesc = v; generateOutput();
-        }));
+        }, true));
 
         // Scene function
-        const sfTd = document.createElement('td');
-        const sel = document.createElement('select');
-        SCENE_FUNCTIONS.forEach(sf => {
-          const opt = document.createElement('option');
-          opt.value = sf;
-          opt.textContent = sf.charAt(0) + sf.slice(1).toLowerCase();
-          if (row.sceneFunc === sf) opt.selected = true;
-          sel.appendChild(opt);
-        });
-        sel.addEventListener('change', () => {
-          rows[i].sceneFunc = sel.value; generateOutput();
-        });
-        sfTd.appendChild(sel);
-        tr.appendChild(sfTd);
+        fields.appendChild(makeSelectGroup('Scene Function', row.sceneFunc, v => {
+          rows[i].sceneFunc = v; generateOutput();
+        }));
 
-        tbody.appendChild(tr);
+        card.appendChild(fields);
+        container.appendChild(card);
       });
 
-      table.appendChild(tbody);
       tableWrap.innerHTML = '';
-      tableWrap.appendChild(table);
+      tableWrap.appendChild(container);
     }
 
-    function makeInputTd(value, placeholder, onChange) {
-      const td = document.createElement('td');
-      const inp = document.createElement('input');
-      inp.type = 'text';
-      inp.value = value;
-      inp.placeholder = placeholder;
-      inp.addEventListener('input', () => onChange(inp.value));
-      td.appendChild(inp);
-      return td;
+    function makeFieldGroup(label, type, value, placeholder, onChange, fullWidth) {
+      const group = document.createElement('div');
+      group.className = 'field-group' + (fullWidth ? ' full-width' : '');
+
+      const lbl = document.createElement('div');
+      lbl.className = 'field-label';
+      lbl.textContent = label;
+      group.appendChild(lbl);
+
+      if (type === 'textarea') {
+        const ta = document.createElement('textarea');
+        ta.className = 'field-textarea';
+        ta.value = value;
+        ta.placeholder = placeholder;
+        ta.rows = 2;
+        ta.addEventListener('input', () => onChange(ta.value));
+        group.appendChild(ta);
+      } else {
+        const inp = document.createElement('input');
+        inp.type = 'text';
+        inp.className = 'field-input';
+        inp.value = value;
+        inp.placeholder = placeholder;
+        inp.addEventListener('input', () => onChange(inp.value));
+        group.appendChild(inp);
+      }
+
+      return group;
     }
 
-    function makeTextareaTd(value, placeholder, onChange) {
-      const td = document.createElement('td');
-      const ta = document.createElement('textarea');
-      ta.value = value;
-      ta.placeholder = placeholder;
-      ta.rows = 2;
-      ta.addEventListener('input', () => onChange(ta.value));
-      td.appendChild(ta);
-      return td;
+    function makeSelectGroup(label, value, onChange) {
+      const group = document.createElement('div');
+      group.className = 'field-group';
+
+      const lbl = document.createElement('div');
+      lbl.className = 'field-label';
+      lbl.textContent = label;
+      group.appendChild(lbl);
+
+      const sel = document.createElement('select');
+      sel.className = 'field-select';
+      SCENE_FUNCTIONS.forEach(sf => {
+        const opt = document.createElement('option');
+        opt.value = sf;
+        opt.textContent = sf.charAt(0) + sf.slice(1).toLowerCase();
+        if (value === sf) opt.selected = true;
+        sel.appendChild(opt);
+      });
+      sel.addEventListener('change', () => onChange(sel.value));
+      group.appendChild(sel);
+
+      return group;
     }
 
     // ---- Generate TypeScript output ----
