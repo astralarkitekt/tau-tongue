@@ -623,7 +623,7 @@ export class TauTongueInterpreter {
 
     let description = `A ${
       operatorSymbol.metaphoricalMeaning.split("; ")[1]
-    } (${crucibleOperator}) acting upon `;
+    } acting upon `;
     // if there is only one argument, just use it to map to the archetype and append to description
     if (args.length === 1) {
       const argSymbol = this.archetypeMap[parseInt(args[0])];
@@ -661,6 +661,12 @@ export class TauTongueInterpreter {
     const description = this.getFunctionDescription(crucible);
 
     return crucible + " - " + description;
+  }
+
+  public getCrucibleFunction(symbolicEquation: string, digitalSum: number): string {
+    const crucibleOperator = symbolicEquation.slice(0, 1);
+    const masterResonance = digitalSum;
+    return `${crucibleOperator}(${masterResonance})`;
   }
 
   public getMicroCrucible(braidFunction: string): string {

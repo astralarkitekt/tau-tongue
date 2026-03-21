@@ -2,7 +2,7 @@
 
 **A symbolic narrative algebra for meaning-making and storytelling.**
 
-[![Version](https://img.shields.io/badge/version-3.8.0-blueviolet)]()
+[![Version](https://img.shields.io/badge/version-3.9.0-blueviolet)]()
 [![TypeScript](https://img.shields.io/badge/TypeScript-ESM-blue)]()
 
 ---
@@ -153,6 +153,7 @@ const interpreter = new TauTongueInterpreter(config?: TauTongueConfig);
 |--------|---------|-------------|
 | `interpret(input)` | `TauTongueResult` | Full pipeline: text → digital root → equation → braid → crucible → narrative. |
 | `getCrucible(equation, digitalSum, resonance, archetype)` | `string` | Extract the crucible operator and description from a symbolic equation. |
+| `getCrucibleFunction(equation)` | `string` | **New in 3.9.0.** Extract just the crucible operator/function from a symbolic equation. |
 | `getMicroCrucible(braidFunction)` | `string` | Get a micro-crucible from a single braid function. |
 | `getAntagonist(equation)` | `TauTongueAntagonist` | Extract the antagonist (longest braid) from the symbolic equation. |
 | `analyzeInterference(result)` | `InflectionPoint[]` | Locate inflection points between braid functions and the interference wave. |
@@ -165,6 +166,21 @@ const interpreter = new TauTongueInterpreter(config?: TauTongueConfig);
 | `getSymbol(symbol)` | `SymbolDefinition \| undefined` | Look up a symbol definition from the configured symbol map. |
 | `getSymbols()` | `string[]` | Get all symbol keys from the configured symbol map. |
 | `render(canvas, result, options?)` | `void` | Render the tau spiral visualization on an HTML canvas. |
+
+#### Standalone Fracticulation Helpers (New in 3.9.0)
+
+You can now use these helpers directly without instantiating the interpreter:
+
+```typescript
+import { fracticulateBraid, fracticulatize } from '@astralarkitekt/tau-tongue';
+
+const braidVariants = await fracticulateBraid('∇(3,4,5)', 3, 7);
+// Returns up to 3 braid variants for the given equation and resonance
+
+const result = interpreter.interpret('Once upon a time');
+const enriched = await fracticulatize(result);
+// Returns a TauTongueResult with .variants arrays on eligible braids
+```
 
 ### Legacy Interpreters (v1 & v2)
 

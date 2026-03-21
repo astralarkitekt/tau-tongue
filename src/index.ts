@@ -16,7 +16,29 @@ export type {
   RenderOptions,
   NarrativePalette,
   TauTongueConfig,
+  // Fracticulation types
+  BraidVariant,
+  BraidVariantScore,
+  VDSResult,
 } from './tau-tongue/TauTongueInterpreter_v3.js';
+// Fracticulation helpers (async, static wrappers for ergonomic import)
+import { TauTongueInterpreter as _TTI, type TauTongueResult } from './tau-tongue/TauTongueInterpreter_v3.js';
+/**
+ * Generate up to 3 fracticulated variants of a braid function (standalone helper).
+ * Equivalent to: new TauTongueInterpreter().fracticulateBraid(...)
+ */
+export const fracticulateBraid = (equation: string, count: number, resonance: number) => {
+  const tti = new _TTI();
+  return tti.fracticulateBraid(equation, count as 1 | 2 | 3, resonance);
+};
+/**
+ * Enrich a TauTongueResult with fracticulated braid variants (standalone helper).
+ * Equivalent to: new TauTongueInterpreter().fracticulatize(...)
+ */
+export const fracticulatize = (result: TauTongueResult) => {
+  const tti = new _TTI();
+  return tti.fracticulatize(result);
+};
 
 // Legacy interpreter exports (v1 and v2 — hardcoded BraidCraft defaults)
 export {

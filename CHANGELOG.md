@@ -5,7 +5,22 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [3.8.0] "Benoît" - 2026-03-13
+
+## [3.9.0] - 2026-03-21
+
+### Added
+- **`getCrucibleFunction(equation)`** — new public method on `TauTongueInterpreter` for extracting the crucible operator/function from a symbolic equation. This provides a more direct and ergonomic way to access the crucible function, separate from the full description.
+- **Standalone fracticulation helpers** — `fracticulateBraid` and `fricticulatize` are now available as named exports from the package, allowing direct use without instantiating the interpreter class.
+
+### Changed
+- **`getFunctionDescription(func)`** — the returned description no longer includes the operator symbol prefix. This makes the output more natural and focused on the narrative/metaphorical meaning.
+- **API Reference & Exports** — All new fracticulation types (`BraidVariant`, `BraidVariantScore`, `VDSResult`) and helpers are now fully exported and documented in the API reference.
+
+### Removed
+-(No removals in this release, but see breaking change below.)
+
+### Breaking
+- **`getFunctionDescription(func)`** output format changed: the operator symbol is no longer included in the returned string. If you relied on the symbol being present, update your code to extract it separately if needed.
 
 ### Added
 - **Archetypal Matrix** — `archetypalMatrix` field on `TauTongueResult`, computed automatically by `interpret()`. Provides archetypal distribution analysis (digit counts, symbol attribution, dominant root, diversity score) for any symbolic equation.
