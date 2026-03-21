@@ -155,3 +155,4 @@ logs
 .pnpmrc
 
 simulations/*
+.claude/*
